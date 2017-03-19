@@ -247,13 +247,25 @@ app.get('/twitter/stream/user', function(req,res) {
 	var access_token = req.session.twitter.access_token;
 	var token_secret = req.session.twitter.token_secret;
 	Twitter.streamUserFeed(req.query,access_token,token_secret,function(info) {
+		console.log("STREAM DATA: " + info.data);
 		res.write("" + info.data);
 	},function(error) {
-		res.write("<<<ERROR>>>");
+		console.log("STREAM ERROR!");
+		res.write("<<<ERROR>>>\n");
 	});
 });
 
-//Twitter - 
+//Twitter - oEmbed
+app.get('/twitter/oembed', function(req,res) {
+	var url = req.query.url;
+	errored((res,rej) => Twitter.oEmbed(url,res,rej)).then(function(info) {
+		res.json(info.content);
+	}, function(error) {
+		var edict = errdict(error);
+		edict.code = 1;
+		res.json(edict);
+	});
+})
 
 //Server
 app.listen(process.env.PORT || 8080);

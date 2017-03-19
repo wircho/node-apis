@@ -3,7 +3,8 @@ var webpack = require('webpack');
  
 module.exports = {
   entry: {
-    main:'./src/main.js'
+    main:'./src/main.js',
+    "twitter/main":'./src/twitter.js',
   },
   output: { path: './public', filename: '[name].entry.js' },
   module: {
