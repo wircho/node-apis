@@ -248,7 +248,7 @@ app.get('/twitter/stream/user', function(req,res) {
 	var token_secret = req.session.twitter.token_secret;
 	Twitter.streamUserFeed(req.query,access_token,token_secret,function(info) {
 		console.log("STREAM DATA: " + info.data);
-		res.write("" + info.data);
+		res.write(info.data);
 	},function(error) {
 		console.log("STREAM ERROR!");
 		res.write("<<<ERROR>>>\n");
@@ -265,6 +265,19 @@ app.get('/twitter/oembed', function(req,res) {
 		edict.code = 1;
 		res.json(edict);
 	});
+})
+
+// Stream test
+app.get('/stream_test', function(req,res) {
+	var counter = 0;
+	function doNext() {
+		counter += 1;
+		res.write(":" + counter + "\n");
+		setTimeout(function() {
+			doNext();
+		},3000);
+	}
+	doNext();
 })
 
 //Server
