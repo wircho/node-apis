@@ -175,6 +175,8 @@ const Tweet = React.createClass({
 function beginLoading() {
   var currentData = "";
   request("GET",base_url + "/twitter/stream/user").onData(function(info) {
+    console.log("got info:");
+    console.log(info);
     currentData += info.data;
     if (info.data.substring(info.data.length-1) === "\n") {
       var string = currentData;
