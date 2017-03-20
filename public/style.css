@@ -4,10 +4,38 @@ body, html {
 	margin:0px; 
 	font-family:sans-serif;
 	font-size:15pt;
-	text-align: center;
 }
-body {
-	padding-top:50px;
-	padding-bottom:50px;
-	padding-left:50px;
+#lefty, #righty {
+	-moz-box-sizing: border-box; 
+    -webkit-box-sizing: border-box; 
+     box-sizing: border-box; 
+}
+#lefty {
+	position:absolute;
+	left:0px;
+	top:0px;
+	width:50%;
+	padding:20px;
+}
+#righty {
+	position:absolute;
+	right:0px;
+	top:0px;
+	width:50%;
+	padding:20px;
+}
+textarea {
+	width:300px;
+	height:70px;
+	font-size:13pt;
+	border-style:solid;
+	border-width:1px;
+	border-color:lightgray;
+	border-radius:5px;
+}
+.modified {
+	background:pink;
+}
+input[type=button] {
+	font-size:13pt;
 }

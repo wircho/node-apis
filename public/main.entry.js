@@ -39925,7 +39925,12 @@
 	    }
 	  },
 	  "get": function(key) {
-	    return fallback(this.cache[key],localStorage.getItem(key));
+	    var cached = this.cache[key];
+	    if (def(cached)) {
+	      return cached;
+	    } else {
+	      return localStorage.getItem(key);
+	    }
 	  },
 	  "remove": function(key) {
 	    localStorage.removeItem(key);

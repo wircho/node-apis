@@ -82,7 +82,9 @@
 
 	var ACTIONS = {
 	  ADD_TWEET: "ADD_TWEET", // tweet
-	  UPDATE_TWEET_HTML: "UPDATE_TWEET_HTML" };
+	  UPDATE_TWEET_HTML: "UPDATE_TWEET_HTML", // id_str, html
+	  UPDATE_TEXT: "UPDATE_TEXT" // propKey, text
+	};
 
 	//Globals
 	var base_url = window.location.protocol + "//" + window.location.hostname + ":" + window.location.port;
@@ -94,6 +96,10 @@
 	  tweets:[id_str, id_str, ...],
 	  tweet_jsons:{id_str:{...}, ...},
 	  tweet_embed_htmls:{id_str:{...}, ...}
+	  keywordList:"...",
+	  importantUserList:"...",
+	  defaultsKeywordList:"...",
+	  defaultsImportantUserList:"..."
 	}
 	*/
 
@@ -101,7 +107,14 @@
 	//const startLoading = ()=>({type:ACTIONS.START_LOADING});
 
 	// Reducer
-	var initialState = {};
+	var _kl = _wirchoUtilities.defaults.get("keywordList");
+	var _iul = _wirchoUtilities.defaults.get("importantUserList");
+	var initialState = {
+	  keywordList: _kl,
+	  importantUserList: _iul,
+	  defaultsKeywordList: _kl,
+	  defaultsImportantUserList: _iul
+	};
 	function app(state, action) {
 	  if (!(0, _wirchoUtilities.def)(state)) {
 	    return initialState;
@@ -122,6 +135,10 @@
 	        tweet_embed_htmls: (0, _wirchoUtilities.mutate)((0, _wirchoUtilities.fallback)(state.tweet_embed_htmls, {}), json)
 	      });
 	      break;
+	    case ACTIONS.UPDATE_TEXT:
+	      var json = {};
+	      json[action.propKey] = action.text;
+	      return (0, _wirchoUtilities.mutate)(state, json);
 	    default:
 	      break;
 	  }
@@ -148,6 +165,9 @@
 	    //     dispatch(setInfo());
 	    //   });
 	    // }
+	    updateText: function updateText(propKey, text) {
+	      dispatch({ type: ACTIONS.UPDATE_TEXT, propKey: propKey, text: text });
+	    }
 	  };
 	};
 
@@ -159,7 +179,8 @@
 	    beginLoading();
 	  },
 	  render: function render() {
-	    var tweetDivs = new Array();
+	    var normalTweets = new Array();
+	    var importantTweets = new Array();
 	    var tweets = (0, _wirchoUtilities.fallback)(this.props.tweets, new Array());
 	    for (var i = tweets.length - 1; i >= 0; i -= 1) {
 	      var id_str = tweets[i];
@@ -168,12 +189,53 @@
 	      console.log("tweet id_str: " + id_str);
 	      console.log("tweet tweet: " + tweet);
 	      console.log("tweet embed_html: " + embed_html);
-	      tweetDivs.push(_react2.default.createElement(Tweet, { key: id_str, tweet: tweet, embed_html: embed_html }));
+	      if (matchesUsers(tweet, this.props.defaultsImportantUserList)) {
+	        importantTweets.push(_react2.default.createElement(Tweet, { key: id_str, tweet: tweet, embed_html: embed_html, place: 'important' }));
+	      } else if (matchesKeywords(tweet, this.props.defaultsKeywordList)) {
+	        normalTweets.push(_react2.default.createElement(Tweet, { key: id_str, tweet: tweet, embed_html: embed_html, place: 'normal' }));
+	      }
+	      console.log("Totals:");
 	    }
+
 	    return _react2.default.createElement(
 	      'div',
 	      { id: 'inner-content' },
-	      tweetDivs
+	      _react2.default.createElement(
+	        'div',
+	        { id: 'lefty' },
+	        _react2.default.createElement(
+	          'p',
+	          null,
+	          'Normal Tweets'
+	        ),
+	        _react2.default.createElement(FilterInput, {
+	          buttonTitle: 'Update Keyword List',
+	          propKey: 'keywordList',
+	          defaultsPropKey: 'defaultsKeywordList',
+	          text: this.props.keywordList,
+	          defaultsText: this.props.defaultsKeywordList,
+	          updateText: this.props.updateText
+	        }),
+	        normalTweets
+	      ),
+	      _react2.default.createElement(
+	        'div',
+	        { id: 'righty' },
+	        _react2.default.createElement(
+	          'p',
+	          null,
+	          'Important Tweets'
+	        ),
+	        _react2.default.createElement(FilterInput, {
+	          buttonTitle: 'Update User List',
+	          propKey: 'importantUserList',
+	          defaultsPropKey: 'defaultsImportantUserList',
+	          text: this.props.importantUserList,
+	          defaultsText: this.props.defaultsImportantUserList,
+	          updateText: this.props.updateText
+	        }),
+	        importantTweets
+	      )
 	    );
 	  }
 	});
@@ -185,24 +247,57 @@
 
 	*/
 
+	var FilterInput = _react2.default.createClass({
+	  displayName: 'FilterInput',
+
+	  handleChange: function handleChange(e) {
+	    this.props.updateText(this.props.propKey, e.target.value);
+	  },
+	  handleClickUpdate: function handleClickUpdate() {
+	    _wirchoUtilities.defaults.set(this.props.propKey, this.props.text);
+	    this.textarea.focus();
+	    this.props.updateText(this.props.defaultsPropKey, this.props.text);
+	  },
+	  render: function render() {
+	    var _this = this;
+
+	    var text = (0, _wirchoUtilities.nullFallback)(this.props.text, "");
+	    var defaultsText = (0, _wirchoUtilities.nullFallback)(this.props.defaultsText, "");
+	    return _react2.default.createElement(
+	      'p',
+	      null,
+	      _react2.default.createElement('textarea', { ref: function ref(area) {
+	          _this.textarea = area;
+	        }, className: classNames({ modified: text !== defaultsText }), onChange: this.handleChange, value: text }),
+	      _react2.default.createElement('br', null),
+	      _react2.default.createElement('br', null),
+	      _react2.default.createElement('input', { type: 'button', value: this.props.buttonTitle, onClick: this.handleClickUpdate })
+	    );
+	  }
+	});
+
 	var Tweet = _react2.default.createClass({
 	  displayName: 'Tweet',
 
 	  componentDidMount: function componentDidMount() {
 	    //return;
 	    //console.log(RequestFrontEndHelpers);
-	    var id_str = this.props.tweet.id_str;
-	    var url = "https://twitter.com/" + this.props.tweet.user.screen_name + "/status/" + id_str;
-	    (0, _wirchoWebUtilities.request)("GET", base_url + "/twitter/oembed", "json").setParam("url", url).onLoad(function (info) {
-	      if ((0, _wirchoUtilities.def)(info.request.response) && (0, _wirchoUtilities.def)(info.request.response.html)) {
-	        store.dispatch({ type: ACTIONS.UPDATE_TWEET_HTML, id_str: id_str, html: info.request.response.html });
-	      }
-	      console.log("oembed response:");
-	      console.log(info.request.response);
-	    }.bind(this)).send();
+	    if ((0, _wirchoUtilities.def)(this.props.embed_html)) {
+	      twttr.widgets.load();
+	    } else {
+	      var id_str = this.props.tweet.id_str;
+	      var url = "https://twitter.com/" + this.props.tweet.user.screen_name + "/status/" + id_str;
+	      (0, _wirchoWebUtilities.request)("GET", base_url + "/twitter/oembed", "json").setParam("url", url).onLoad(function (info) {
+	        if ((0, _wirchoUtilities.def)(info.request.response) && (0, _wirchoUtilities.def)(info.request.response.html)) {
+	          store.dispatch({ type: ACTIONS.UPDATE_TWEET_HTML, id_str: id_str, html: info.request.response.html });
+	        }
+	        console.log("oembed response:");
+	        console.log(info.request.response);
+	      }.bind(this)).send();
+	    }
 	  },
 	  componentDidUpdate: function componentDidUpdate(prevProps) {
-	    if ((0, _wirchoUtilities.def)(this.props.embed_html) && !(0, _wirchoUtilities.def)(prevProps.embed_html)) {
+	    if ((0, _wirchoUtilities.def)(this.props.embed_html) && !(0, _wirchoUtilities.def)(prevProps.embed_html) || this.props.place !== prevProps.place) {
 	      twttr.widgets.load();
 	    }
 	  },
@@ -236,6 +331,8 @@
 	function beginLoading() {
 	  var currentData = "";
 	  (0, _wirchoWebUtilities.request)("GET", base_url + "/twitter/stream/user").onData(function (info) {
+	    console.log("got info:");
+	    console.log(info);
 	    currentData += info.data;
 	    if (info.data.substring(info.data.length - 1) === "\n") {
 	      var string = currentData;
@@ -257,6 +354,32 @@
 	      }
 	    }
 	  }).send();
+	}
+
+	function matchesKeywords(tweet, _keywordList) {
+	  var keywordList = (0, _wirchoUtilities.nullFallback)(_keywordList, "");
+	  return true;
+	}
+
+	var userListCache = {};
+	function matchesUsers(tweet, _userList) {
+	  var userList = (0, _wirchoUtilities.nullFallback)(_userList, "");
+	  var userArray = userListCache[userList];
+	  if (!(0, _wirchoUtilities.def)(userArray)) {
+	    userArray = userList.replace(/[^a-zA-Z0-9_,]/, "").split(",");
+	    if (userArray.length === 1 && userArray[0] === "") {
+	      userArray = new Array();
+	    }
+	    userListCache = {};
+	    userListCache[userList] = userArray;
+	  }
+	  for (var i = 0; i < userArray.length; i += 1) {
+	    var user = userArray[i];
+	    if (user.toLowerCase() === tweet.user.screen_name.toLowerCase()) {
+	      return true;
+	    }
+	  }
+	  return false;
 	}
 
 	//React / Redux connection and render
@@ -40042,7 +40165,12 @@
 	    }
 	  },
 	  "get": function(key) {
-	    return fallback(this.cache[key],localStorage.getItem(key));
+	    var cached = this.cache[key];
+	    if (def(cached)) {
+	      return cached;
+	    } else {
+	      return localStorage.getItem(key);
+	    }
 	  },
 	  "remove": function(key) {
 	    localStorage.removeItem(key);
