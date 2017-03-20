@@ -287,7 +287,7 @@ function matchesUsers(tweet,_userList) {
   var userList = nullFallback(_userList,"");
   var userArray = userListCache[userList];
   if (!def(userArray)) {
-    userArray = userList.replace(/[^a-zA-Z0-9_,]/,"").split(",");
+    userArray = userList.replace(/[^a-zA-Z0-9_,]/g,"").split(",");
     if (userArray.length === 1 && userArray[0] === "") {
       userArray = new Array();
     }
