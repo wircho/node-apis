@@ -193,6 +193,8 @@
 	        importantTweets.push(_react2.default.createElement(Tweet, { key: id_str, tweet: tweet, embed_html: embed_html, place: 'important' }));
 	      } else if (matchesKeywords(tweet, this.props.defaultsKeywordList)) {
 	        normalTweets.push(_react2.default.createElement(Tweet, { key: id_str, tweet: tweet, embed_html: embed_html, place: 'normal' }));
+	      } else {
+	        normalTweets.push(_react2.default.createElement(Tweet, { key: id_str, tweet: tweet, embed_html: embed_html, place: 'normal', fade: 'true' }));
 	      }
 	      console.log("Totals:");
 	    }
@@ -302,13 +304,14 @@
 	    }
 	  },
 	  render: function render() {
+	    var c = classNames({ faded: false || this.props.fade });
 	    if ((0, _wirchoUtilities.def)(this.props.embed_html)) {
 	      var htmlJSON = { __html: this.props.embed_html };
-	      return _react2.default.createElement('div', { dangerouslySetInnerHTML: htmlJSON });
+	      return _react2.default.createElement('div', { className: c, dangerouslySetInnerHTML: htmlJSON });
 	    } else {
 	      return _react2.default.createElement(
 	        'div',
-	        null,
+	        { className: c },
 	        _react2.default.createElement(
 	          'blockquote',
 	          null,
@@ -356,9 +359,67 @@
 	  }).send();
 	}
 
+	var onlySymbols = /^[^a-zA-Z0-9_]*$/;
+	var allNonAlpha = /[^a-zA-Z0-9_,]/g;
+	var allNonAlpha_Space_Star_Exc = /[^a-zA-Z0-9_ \*!]/g;
+	var allMultiSpace = /[ ]{2,}/g;
+	var initialSpaces = /^[ ]+/;
+	var finalSpaces = /[ ]+$/;
+	var initialExc = /^!/;
+	var initialStar = /^\*/;
+	var finalStar = /\*$/;
+
+	var keywordREsCache = {};
 	function matchesKeywords(tweet, _keywordList) {
 	  var keywordList = (0, _wirchoUtilities.nullFallback)(_keywordList, "");
-	  return true;
+	  if (keywordList.match(onlySymbols) !== null) {
+	    return true;
+	  }
+	  var keywordREs = keywordREsCache[keywordList];
+	  if (!(0, _wirchoUtilities.def)(keywordREs)) {
+	    keywordREs = getKeywordREs(keywordList);
+	    keywordREsCache = {};
+	    keywordREsCache[keywordList] = keywordREs;
+	  }
+	  return matchesKeywordREs(tweet, keywordREs);
+	}
+
+	function getKeywordREs(keywordList) {
+	  return keywordList.split(",").map(function (keyword) {
+	    var k = keyword.replace(allNonAlpha_Space_Star_Exc, " ").replace(allMultiSpace, " ").replace(initialSpaces, "").replace(finalSpaces, "");
+	    var fixedCase = false;
+	    if (k.match(initialExc) !== null) {
+	      fixedCase = true;
+	      k = k.replace(initialExc, "").replace(initialSpaces, "");
+	    } else {
+	      k = k.toLowerCase();
+	    }
+	    var wildcardLeft = false;
+	    if (k.match(initialStar) !== null) {
+	      wildcardLeft = true;
+	      k = k.replace(initialStar, "").replace(initialSpaces, "");
+	    }
+	    var wildcardRight = false;
+	    if (k.match(finalStar) !== null) {
+	      wildcardRight = true;
+	      k = k.replace(finalStar, "").replace(finalSpaces, "");
+	    }
+	    k = k.replace(allNonAlpha, " ").replace(allMultiSpace, " ").replace(initialSpaces, "").replace(finalSpaces, "");
+	    var regBody = (wildcardLeft ? "[^ ]*" : "( |^)") + k + (wildcardRight ? "[^ ]*" : "( |$)");
+	    var regExp = fixedCase ? new RegExp(regBody) : new RegExp(regBody, "i");
+	    return regExp;
+	  });
+	}
+
+	function matchesKeywordREs(tweet, keywordREs) {
+	  var text = tweet.text.replace(allNonAlpha, " ").replace(allMultiSpace, " ").replace(initialSpaces, "").replace(finalSpaces, "");
+	  for (var i = 0; i < keywordREs.length; i += 1) {
+	    var re = keywordREs[i];
+	    if (text.match(re) !== null) {
+	      return true;
+	    }
+	  }
+	  return false;
 	}
 
 	var userListCache = {};
@@ -366,7 +427,7 @@
 	  var userList = (0, _wirchoUtilities.nullFallback)(_userList, "");
 	  var userArray = userListCache[userList];
 	  if (!(0, _wirchoUtilities.def)(userArray)) {
-	    userArray = userList.replace(/[^a-zA-Z0-9_,]/g, "").split(",");
+	    userArray = userList.replace(allNonAlpha, "").split(",");
 	    if (userArray.length === 1 && userArray[0] === "") {
 	      userArray = new Array();
 	    }

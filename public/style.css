@@ -39,3 +39,6 @@ textarea {
 input[type=button] {
 	font-size:13pt;
 }
+.faded {
+	opacity: 0.15;
+}
