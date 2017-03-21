@@ -216,12 +216,17 @@ const NeedsAuthStatus = React.createClass({
   }
 });
 
+var alreadyLoadedAuth = false;
 const NeedsLogIn = React.createClass({
-  componentDidMount: function() {
-    loadTwitterAppAuthorization(this.props.request_token);
+  loadAuth: function(event) {
+    event.preventDefault();
+    if (!alreadyLoadedAuth) {
+      loadTwitterAppAuthorization(this.props.request_token);
+    }
+    alreadyLoadedAuth = true;
   },
   render: function() {
-    return <div/>;
+    return <div id ="needs-login">Please authorize Twitter.<br/><br/><a href="" onClick={this.loadAuth} className="login">Authorize</a></div>;
   }
 });
 
@@ -235,6 +240,12 @@ const NeedsAccessToken = React.createClass({
 });
 
 const ActualApp = React.createClass({
+  logOut: function(event) {
+    event.preventDefault();
+    request("GET",base_url + "/twitter/log_out").onLoad(function(info) {
+      window.location.reload();
+    }).send();
+  },
   componentDidMount: function() {
     beginLoading();
   },
@@ -261,6 +272,9 @@ const ActualApp = React.createClass({
 
     return (
       <div id="inner-content">
+        <div id="topy">
+          <a href="" className="logout" onClick={this.logOut}>Log Out</a>
+        </div>
         <div id="lefty">
           <p>Normal Tweets</p>
           <FilterInput

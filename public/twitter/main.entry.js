@@ -272,14 +272,30 @@
 	  }
 	});
 
+	var alreadyLoadedAuth = false;
 	var NeedsLogIn = _react2.default.createClass({
 	  displayName: 'NeedsLogIn',
 
-	  componentDidMount: function componentDidMount() {
-	    loadTwitterAppAuthorization(this.props.request_token);
+	  loadAuth: function loadAuth(event) {
+	    event.preventDefault();
+	    if (!alreadyLoadedAuth) {
+	      loadTwitterAppAuthorization(this.props.request_token);
+	    }
+	    alreadyLoadedAuth = true;
 	  },
 	  render: function render() {
-	    return _react2.default.createElement('div', null);
+	    return _react2.default.createElement(
+	      'div',
+	      { id: 'needs-login' },
+	      'Please authorize Twitter.',
+	      _react2.default.createElement('br', null),
+	      _react2.default.createElement('br', null),
+	      _react2.default.createElement(
+	        'a',
+	        { href: '', onClick: this.loadAuth, className: 'login' },
+	        'Authorize'
+	      )
+	    );
 	  }
 	});
 
@@ -301,6 +317,12 @@
 	var ActualApp = _react2.default.createClass({
 	  displayName: 'ActualApp',
 
+	  logOut: function logOut(event) {
+	    event.preventDefault();
+	    (0, _wirchoWebUtilities.request)("GET", base_url + "/twitter/log_out").onLoad(function (info) {
+	      window.location.reload();
+	    }).send();
+	  },
 	  componentDidMount: function componentDidMount() {
 	    beginLoading();
 	  },
@@ -328,6 +350,15 @@
 	    return _react2.default.createElement(
 	      'div',
 	      { id: 'inner-content' },
+	      _react2.default.createElement(
+	        'div',
+	        { id: 'topy' },
+	        _react2.default.createElement(
+	          'a',
+	          { href: '', className: 'logout', onClick: this.logOut },
+	          'Log Out'
+	        )
+	      ),
 	      _react2.default.createElement(
 	        'div',
 	        { id: 'lefty' },
