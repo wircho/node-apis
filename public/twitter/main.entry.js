@@ -83,7 +83,9 @@
 	var ACTIONS = {
 	  ADD_TWEET: "ADD_TWEET", // tweet
 	  UPDATE_TWEET_HTML: "UPDATE_TWEET_HTML", // id_str, html
-	  UPDATE_TEXT: "UPDATE_TEXT" // propKey, text
+	  UPDATE_TEXT: "UPDATE_TEXT", // propKey, text
+	  LOGGED_IN: "LOGGED_IN", // no params
+	  GOT_REQUEST_TOKEN: "GOT_REQUEST_TOKEN"
 	};
 
 	//Globals
@@ -99,7 +101,11 @@
 	  keywordList:"...",
 	  importantUserList:"...",
 	  defaultsKeywordList:"...",
-	  defaultsImportantUserList:"..."
+	  defaultsImportantUserList:"...",
+	  logged_in:true,
+	  request_token:...,
+	  verifier:...,
+	  error:...
 	}
 	*/
 
@@ -109,12 +115,32 @@
 	// Reducer
 	var _kl = _wirchoUtilities.defaults.get("keywordList");
 	var _iul = _wirchoUtilities.defaults.get("importantUserList");
+	var _href = window.location.href;
+	console.log("href: " + _href);
+	var _comps = new _wirchoWebUtilities.URLComponents(_href);
+	console.log("Components:");
+	console.log(_comps);
+	var _params = _comps.params;
+	console.log("Params:");
+	console.log(_params);
+	var _uq = _wirchoWebUtilities.QueryItem.dictionaryFromArray(_params);
+	console.log("_uq:");
+	console.log(_uq);
+	var _rt = _uq.oauth_token;
+	var _vr = _uq.oauth_verifier;
+	console.log("oauth_token: " + _rt);
+	console.log("verifier: " + _vr);
 	var initialState = {
 	  keywordList: _kl,
 	  importantUserList: _iul,
 	  defaultsKeywordList: _kl,
 	  defaultsImportantUserList: _iul
 	};
+	if ((0, _wirchoUtilities.def)(_rt) && (0, _wirchoUtilities.def)(_vr)) {
+	  initialState.request_token = _rt;
+	  initialState.verifier = _vr;
+	  initialState.logged_in = false;
+	}
 	function app(state, action) {
 	  if (!(0, _wirchoUtilities.def)(state)) {
 	    return initialState;
@@ -135,10 +161,20 @@
 	        tweet_embed_htmls: (0, _wirchoUtilities.mutate)((0, _wirchoUtilities.fallback)(state.tweet_embed_htmls, {}), json)
 	      });
 	      break;
+	    case ACTIONS.LOGGED_IN:
+	      return (0, _wirchoUtilities.mutate)(state, { logged_in: true });
+	      break;
+	    case ACTIONS.GOT_REQUEST_TOKEN:
+	      return (0, _wirchoUtilities.mutate)(state, {
+	        logged_in: false,
+	        request_token: action.request_token
+	      });
+	      break;
 	    case ACTIONS.UPDATE_TEXT:
 	      var json = {};
 	      json[action.propKey] = action.text;
 	      return (0, _wirchoUtilities.mutate)(state, json);
+	      break;
 	    default:
 	      break;
 	  }
@@ -175,6 +211,96 @@
 	var App = _react2.default.createClass({
 	  displayName: 'App',
 
+	  render: function render() {
+	    if ((0, _wirchoUtilities.def)(this.props.error)) {
+	      // There's an error to display
+	      return _react2.default.createElement(ShowError, { error: this.props.error });
+	    } else if (!(0, _wirchoUtilities.def)(this.props.logged_in)) {
+	      // Needs to check Twitter auth status
+	      return _react2.default.createElement(NeedsAuthStatus, null);
+	    } else if (!this.props.logged_in && !(0, _wirchoUtilities.def)(this.props.verifier)) {
+	      // Needs to log in. Assume request_token is available
+	      return _react2.default.createElement(NeedsLogIn, { request_token: this.props.request_token });
+	    } else if (!this.props.logged_in && (0, _wirchoUtilities.def)(this.props.verifier)) {
+	      // Needs to get access token. Assume request token and verifier are available
+	      return _react2.default.createElement(NeedsAccessToken, { request_token: this.props.request_token, verifier: this.props.verifier });
+	    } else {
+	      // Logged in
+	      return _react2.default.createElement(ActualApp, {
+	        tweets: this.props.tweets,
+	        tweet_jsons: this.props.tweet_jsons,
+	        tweet_embed_htmls: this.props.tweet_embed_htmls,
+	        keywordList: this.props.keywordList,
+	        importantUserList: this.props.importantUserList,
+	        defaultsKeywordList: this.props.defaultsKeywordList,
+	        defaultsImportantUserList: this.props.defaultsImportantUserList,
+	        updateText: this.props.updateText
+	      });
+	    }
+	  }
+	});
+
+	var ShowError = _react2.default.createClass({
+	  displayName: 'ShowError',
+
+	  render: function render() {
+	    return _react2.default.createElement(
+	      'div',
+	      { id: 'show-error' },
+	      'Something went wrong.',
+	      _react2.default.createElement('br', null),
+	      'Please refresh this page.',
+	      _react2.default.createElement('br', null),
+	      _react2.default.createElement('br', null),
+	      this.props.error
+	    );
+	  }
+	});
+
+	var NeedsAuthStatus = _react2.default.createClass({
+	  displayName: 'NeedsAuthStatus',
+
+	  componentDidMount: function componentDidMount() {
+	    checkTwitterAuthStatus();
+	  },
+	  render: function render() {
+	    return _react2.default.createElement(
+	      'div',
+	      { id: 'needs-auth' },
+	      'Checking Twitter Authorization...'
+	    );
+	  }
+	});
+
+	var NeedsLogIn = _react2.default.createClass({
+	  displayName: 'NeedsLogIn',
+
+	  componentDidMount: function componentDidMount() {
+	    loadTwitterAppAuthorization(this.props.request_token);
+	  },
+	  render: function render() {
+	    return _react2.default.createElement('div', null);
+	  }
+	});
+
+	var NeedsAccessToken = _react2.default.createClass({
+	  displayName: 'NeedsAccessToken',
+
+	  componentDidMount: function componentDidMount() {
+	    getAccessToken(this.props.request_token, this.props.verifier);
+	  },
+	  render: function render() {
+	    return _react2.default.createElement(
+	      'div',
+	      { id: 'needs-access' },
+	      'Please wait...'
+	    );
+	  }
+	});
+
+	var ActualApp = _react2.default.createClass({
+	  displayName: 'ActualApp',
+
 	  componentDidMount: function componentDidMount() {
 	    beginLoading();
 	  },
@@ -194,7 +320,7 @@
 	      } else if (matchesKeywords(tweet, this.props.defaultsKeywordList)) {
 	        normalTweets.push(_react2.default.createElement(Tweet, { key: id_str, tweet: tweet, embed_html: embed_html, place: 'normal' }));
 	      } else {
-	        normalTweets.push(_react2.default.createElement(Tweet, { key: id_str, tweet: tweet, embed_html: embed_html, place: 'normal', fade: 'true' }));
+	        //normalTweets.push(<Tweet key={id_str} tweet={tweet} embed_html={embed_html} place="normal" fade="true"/>);
 	      }
 	      console.log("Totals:");
 	    }
@@ -330,6 +456,58 @@
 	    }
 	  }
 	});
+
+	function checkTwitterAuthStatus() {
+	  (0, _wirchoWebUtilities.request)("GET", base_url + "/twitter/auth_status", "json").setParam("callback", base_url + "/twitter/").onLoad(function (info) {
+	    if ((0, _wirchoUtilities.def)(info.request.response.error)) {
+	      //console.log("AUTH STATUS OBTAINED: ERROR " + info.request.response.error);
+	      //setTimeout(function(){
+	      store.dispatch({ type: ACTIONS.UPDATE_TEXT, propKey: "error", text: info.request.response.error });
+	      //},15000);
+	    } else if (!(0, _wirchoUtilities.def)(info.request.response.logged_in)) {
+	      // console.log("AUTH STATUS OBTAINED: ERROR Bad auth_status answer");
+	      // setTimeout(function(){
+	      store.dispatch({ type: ACTIONS.UPDATE_TEXT, propKey: "error", text: "Bad auth_status answer" });
+	      // },15000);
+	    } else if (info.request.response.logged_in) {
+	      // console.log("AUTH STATUS OBTAINED: LOGGED IN!");
+	      // setTimeout(function(){
+	      store.dispatch({ type: ACTIONS.LOGGED_IN });
+	      // },15000);
+	    } else if (!(0, _wirchoUtilities.def)(info.request.response.request_token)) {
+	      // console.log("AUTH STATUS OBTAINED: ERROR No request token");
+	      // setTimeout(function(){
+	      store.dispatch({ type: ACTIONS.UPDATE_TEXT, propKey: "error", text: "No request token" });
+	      // },15000);
+	    } else {
+	      // console.log("AUTH STATUS OBTAINED: request_token " + info.request.response.request_token);
+	      // setTimeout(function(){
+	      store.dispatch({ type: ACTIONS.GOT_REQUEST_TOKEN, request_token: info.request.response.request_token });
+	      // },15000);
+	    }
+	  }).onError(function (info) {
+	    // console.log("AUTH STATUS OBTAINED: ERROR Error loading auth_status URL.");
+	    // setTimeout(function(){
+	    store.dispatch({ type: ACTIONS.UPDATE_TEXT, propKey: "error", text: "Error loading auth_status URL." });
+	    // },15000);
+	  }).send();
+	}
+
+	function loadTwitterAppAuthorization(request_token) {
+	  var url = "https://api.twitter.com/oauth/authorize?oauth_token=" + encodeURIComponent(request_token);
+	  console.log("URL FOR AUTH IS: " + url);
+	  //setTimeout(function() {
+	  window.location.replace(url);
+	  //}, 15000);
+	}
+
+	function getAccessToken(request_token, verifier) {
+	  (0, _wirchoWebUtilities.request)("GET", base_url + "/twitter/get_access", "json").setParams({ request_token: request_token, verifier: verifier }).onLoad(function (info) {
+	    window.location.replace(base_url + "/twitter/");
+	  }).onError(function (info) {
+	    window.location.replace(base_url + "/twitter/");
+	  }).send();
+	}
 
 	function beginLoading() {
 	  var currentData = "";
@@ -28492,7 +28670,7 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
-	 * jQuery JavaScript Library v3.2.0
+	 * jQuery JavaScript Library v3.2.1
 	 * https://jquery.com/
 	 *
 	 * Includes Sizzle.js
@@ -28502,7 +28680,7 @@
 	 * Released under the MIT license
 	 * https://jquery.org/license
 	 *
-	 * Date: 2017-03-16T21:26Z
+	 * Date: 2017-03-20T18:59Z
 	 */
 	( function( global, factory ) {
 
@@ -28581,7 +28759,7 @@
 
 
 	var
-		version = "3.2.0",
+		version = "3.2.1",
 
 		// Define a local copy of jQuery
 		jQuery = function( selector, context ) {
@@ -33836,11 +34014,9 @@
 			},
 			click: {
 
-				// For checkable types, fire native event so checked state will be right
+				// For checkbox, fire native event so checked state will be right
 				trigger: function() {
-					if ( rcheckableType.test( this.type ) &&
-						this.click && nodeName( this, "input" ) ) {
-
+					if ( this.type === "checkbox" && this.click && nodeName( this, "input" ) ) {
 						this.click();
 						return false;
 					}
@@ -34660,6 +34836,11 @@
 
 	function curCSS( elem, name, computed ) {
 		var width, minWidth, maxWidth, ret,
+
+			// Support: Firefox 51+
+			// Retrieving style before computed somehow
+			// fixes an issue with getting wrong values
+			// on detached elements
 			style = elem.style;
 
 		computed = computed || getStyles( elem );
@@ -34847,6 +35028,12 @@
 		// for getComputedStyle silently falls back to the reliable elem.style
 		valueIsBorderBox = isBorderBox &&
 			( support.boxSizingReliable() || val === elem.style[ name ] );
+
+		// Fall back to offsetWidth/Height when value is "auto"
+		// This happens for inline elements with no explicit setting (gh-3571)
+		if ( val === "auto" ) {
+			val = elem[ "offset" + name[ 0 ].toUpperCase() + name.slice( 1 ) ];
+		}
 
 		// Normalize "", auto, and prepare for extra
 		val = parseFloat( val ) || 0;
@@ -38664,16 +38851,16 @@
 			return arguments.length === 1 ?
 				this.off( selector, "**" ) :
 				this.off( types, selector || "**", fn );
-		},
-		holdReady: function( hold ) {
-			if ( hold ) {
-				jQuery.readyWait++;
-			} else {
-				jQuery.ready( true );
-			}
 		}
 	} );
 
+	jQuery.holdReady = function( hold ) {
+		if ( hold ) {
+			jQuery.readyWait++;
+		} else {
+			jQuery.ready( true );
+		}
+	};
 	jQuery.isArray = Array.isArray;
 	jQuery.parseJSON = JSON.parse;
 	jQuery.nodeName = nodeName;
@@ -40420,29 +40607,44 @@
 	function URLComponents(url) {
 	  if (def(url)) {
 	    var u = url;
+	    console.log("- Parsing URL " + u);
 	    var hashSplit = u.split("#");
 	    if (hashSplit.length > 1) {
 	      u = hashSplit.shift();
+	      console.log("- New URL " + u);
 	      this.fragment = hashSplit.join("#");
+	      console.log("- Fragment " + this.fragment);
+	    } else {
+	      console.log("- No fragment found. URL remains " + u);
 	    }
 	    var qSplit = u.split("?");
-	    if (qSplit.lenght > 1) {
+	    if (qSplit.length > 1) {
 	      u = qSplit.shift();
+	      console.log("- New URL " + u);
 	      this.params = QueryItem.arrayFromString(qSplit.join("?"));
+	      console.log("- Params: " + this.params);
 	    } else {
+	      console.log("- No params found. URL remains " + u);
 	      this.params = new Array();
 	    }
 	    var bSplit = u.split("://");
 	    if (bSplit.length > 1) {
 	      this.protocol = bSplit.shift();
 	      u = bSplit.join("://");
+	      console.log("- New URL " + u);
+	      console.log("- Protocol: " + this.protocol);
 	    } else {
+	      console.log("- No protocol found. URL remains " + u);
 	      this.protocol = "http";
 	    }
 	    var pSplit = u.split("/");
 	    if (pSplit.length > 1) {
 	      u = pSplit.shift();
+	      console.log("- New URL " + u);
 	      this.path = "/" + pSplit.join("/");
+	      console.log("- Path: " + this.path);
+	    } else {
+	      console.log("- No path found. URL remains " + u);
 	    }
 	    this.base = u;
 	  };
@@ -40763,9 +40965,9 @@
 	  return b64_hmac_sha1(signingKey,baseString);
 	}.bind(Twitter);
 
-	Twitter.getRequestToken = function(res,rej) {
+	Twitter.getRequestToken = function(callbackURL,res,rej) {
 	  var r = request("POST","https://api.twitter.com/oauth/request_token");
-	  var headerDictionary = this.generateHeaderDictionaryWithSignature(r);
+	  var headerDictionary = this.generateHeaderDictionaryWithSignature(r, undefined, undefined, {oauth_callback: callbackURL});
 	  var authHeader = this.generateOAuthHeader(headerDictionary);
 	  r.setHeader("Authorization",authHeader).onLoad(res).onError(rej).send();
 	}.bind(Twitter);

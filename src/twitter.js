@@ -41,7 +41,9 @@ RequestHelpers.use(RequestFrontEndHelpers);
 const ACTIONS = {
   ADD_TWEET:"ADD_TWEET", // tweet
   UPDATE_TWEET_HTML:"UPDATE_TWEET_HTML", // id_str, html
-  UPDATE_TEXT:"UPDATE_TEXT" // propKey, text
+  UPDATE_TEXT:"UPDATE_TEXT", // propKey, text
+  LOGGED_IN:"LOGGED_IN", // no params
+  GOT_REQUEST_TOKEN:"GOT_REQUEST_TOKEN"
 }
 
 //Globals
@@ -57,7 +59,11 @@ console.log("base: " + base_url);
   keywordList:"...",
   importantUserList:"...",
   defaultsKeywordList:"...",
-  defaultsImportantUserList:"..."
+  defaultsImportantUserList:"...",
+  logged_in:true,
+  request_token:...,
+  verifier:...,
+  error:...
 }
 */
 
@@ -67,12 +73,32 @@ console.log("base: " + base_url);
 // Reducer
 var _kl = defaults.get("keywordList");
 var _iul = defaults.get("importantUserList");
+var _href = window.location.href;
+console.log("href: " + _href);
+var _comps = new URLComponents(_href);
+console.log("Components:");
+console.log(_comps);
+var _params = _comps.params;
+console.log("Params:");
+console.log(_params);
+var _uq = QueryItem.dictionaryFromArray(_params);
+console.log("_uq:");
+console.log(_uq);
+var _rt = _uq.oauth_token;
+var _vr = _uq.oauth_verifier;
+console.log("oauth_token: " + _rt);
+console.log("verifier: " + _vr);
 const initialState = {
   keywordList:_kl,
   importantUserList:_iul,
   defaultsKeywordList:_kl,
   defaultsImportantUserList:_iul
 };
+if (def(_rt) && def(_vr)) {
+  initialState.request_token = _rt;
+  initialState.verifier = _vr;
+  initialState.logged_in = false;
+}
 function app(state,action) {
   if (!def(state)) {
     return initialState
@@ -99,6 +125,15 @@ function app(state,action) {
         }
       );
     break;
+    case ACTIONS.LOGGED_IN:
+      return mutate(state, {logged_in:true});
+    break;
+    case ACTIONS.GOT_REQUEST_TOKEN:
+      return mutate(state, {
+        logged_in: false,
+        request_token: action.request_token
+      });
+    break;
     case ACTIONS.UPDATE_TEXT:
       var json = {};
       json[action.propKey] = action.text;
@@ -106,6 +141,7 @@ function app(state,action) {
         state,
         json
       );
+    break;
     default:
     break;
   }
@@ -136,6 +172,69 @@ const mapDispatchToProps = (dispatch) => ({
 
 //React classes
 const App = React.createClass({
+  render: function() {
+    if (def(this.props.error)) {
+      // There's an error to display
+      return <ShowError error={this.props.error}/>;
+    } else if (!def(this.props.logged_in)) {
+      // Needs to check Twitter auth status
+      return <NeedsAuthStatus/>;
+    } else if (!this.props.logged_in && !def(this.props.verifier)) {
+      // Needs to log in. Assume request_token is available
+      return <NeedsLogIn request_token={this.props.request_token}/>
+    } else if (!this.props.logged_in && def(this.props.verifier)) {
+      // Needs to get access token. Assume request token and verifier are available
+      return <NeedsAccessToken request_token={this.props.request_token} verifier={this.props.verifier}/>;
+    } else {
+      // Logged in
+      return <ActualApp
+        tweets={this.props.tweets}
+        tweet_jsons={this.props.tweet_jsons}
+        tweet_embed_htmls={this.props.tweet_embed_htmls}
+        keywordList={this.props.keywordList}
+        importantUserList={this.props.importantUserList}
+        defaultsKeywordList={this.props.defaultsKeywordList}
+        defaultsImportantUserList={this.props.defaultsImportantUserList}
+        updateText={this.props.updateText}
+      />;
+    }
+  }
+});
+
+const ShowError = React.createClass({
+  render: function() {
+    return (<div id="show-error">Something went wrong.<br/>Please refresh this page.<br/><br/>{this.props.error}</div>);
+  }
+});
+
+const NeedsAuthStatus = React.createClass({
+  componentDidMount: function() {
+    checkTwitterAuthStatus();
+  },
+  render: function() {
+    return (<div id="needs-auth">Checking Twitter Authorization...</div>);
+  }
+});
+
+const NeedsLogIn = React.createClass({
+  componentDidMount: function() {
+    loadTwitterAppAuthorization(this.props.request_token);
+  },
+  render: function() {
+    return <div/>;
+  }
+});
+
+const NeedsAccessToken = React.createClass({
+  componentDidMount: function() {
+    getAccessToken(this.props.request_token,this.props.verifier);
+  },
+  render: function() {
+    return (<div id="needs-access">Please wait...</div>);
+  }
+});
+
+const ActualApp = React.createClass({
   componentDidMount: function() {
     beginLoading();
   },
@@ -155,7 +254,7 @@ const App = React.createClass({
       } else if (matchesKeywords(tweet,this.props.defaultsKeywordList)) {
         normalTweets.push(<Tweet key={id_str} tweet={tweet} embed_html={embed_html} place="normal"/>);
       } else {
-        normalTweets.push(<Tweet key={id_str} tweet={tweet} embed_html={embed_html} place="normal" fade="true"/>);
+        //normalTweets.push(<Tweet key={id_str} tweet={tweet} embed_html={embed_html} place="normal" fade="true"/>);
       }
       console.log("Totals:");
     }
@@ -251,6 +350,58 @@ const Tweet = React.createClass({
     }
   }
 });
+
+function checkTwitterAuthStatus() {
+  request("GET",base_url + "/twitter/auth_status","json").setParam("callback",base_url + "/twitter/").onLoad(function(info) {
+    if (def(info.request.response.error)) {
+      //console.log("AUTH STATUS OBTAINED: ERROR " + info.request.response.error);
+      //setTimeout(function(){
+      store.dispatch({type:ACTIONS.UPDATE_TEXT, propKey:"error", text:info.request.response.error});
+      //},15000);
+    } else if (!def(info.request.response.logged_in)) {
+      // console.log("AUTH STATUS OBTAINED: ERROR Bad auth_status answer");
+      // setTimeout(function(){
+      store.dispatch({type:ACTIONS.UPDATE_TEXT, propKey:"error", text:"Bad auth_status answer"});
+      // },15000);
+    } else if (info.request.response.logged_in) {
+      // console.log("AUTH STATUS OBTAINED: LOGGED IN!");
+      // setTimeout(function(){
+      store.dispatch({type:ACTIONS.LOGGED_IN});
+      // },15000);
+    } else if (!def(info.request.response.request_token)) {
+      // console.log("AUTH STATUS OBTAINED: ERROR No request token");
+      // setTimeout(function(){
+      store.dispatch({type:ACTIONS.UPDATE_TEXT, propKey:"error", text:"No request token"});
+      // },15000);
+    } else {
+      // console.log("AUTH STATUS OBTAINED: request_token " + info.request.response.request_token);
+      // setTimeout(function(){
+      store.dispatch({type:ACTIONS.GOT_REQUEST_TOKEN, request_token:info.request.response.request_token});
+      // },15000);
+    }
+  }).onError(function(info) {
+    // console.log("AUTH STATUS OBTAINED: ERROR Error loading auth_status URL.");
+    // setTimeout(function(){
+    store.dispatch({type:ACTIONS.UPDATE_TEXT, propKey:"error", text:"Error loading auth_status URL."});
+    // },15000);
+  }).send();
+}
+
+function loadTwitterAppAuthorization(request_token) {
+  var url = "https://api.twitter.com/oauth/authorize?oauth_token=" + encodeURIComponent(request_token);
+  console.log("URL FOR AUTH IS: " + url);
+  //setTimeout(function() {
+  window.location.replace(url);
+  //}, 15000);
+}
+
+function getAccessToken(request_token,verifier) {
+  request("GET",base_url + "/twitter/get_access","json").setParams({request_token,verifier}).onLoad(function(info) {
+    window.location.replace(base_url + "/twitter/");
+  }).onError(function(info) {
+    window.location.replace(base_url + "/twitter/");
+  }).send();
+}
 
 function beginLoading() {
   var currentData = "";

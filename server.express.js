@@ -127,7 +127,7 @@ function getAuthStatus(req,res) {
 		if (def(req.session.twitter)) {
 			var currentTimestamp = Math.floor(Date.now() / 1000);
 			var request_token_timestamp = req.session.twitter.request_token_timestamp;
-			if (def(request_token_timestamp) && request_token_timestamp > currentTimestamp - 60) {
+			if (def(request_token_timestamp) && request_token_timestamp > currentTimestamp - 3) {
 				request_token = req.session.twitter.request_token;
 				token_secret = req.session.twitter.token_secret;
 			}
@@ -135,7 +135,8 @@ function getAuthStatus(req,res) {
 		if (def(request_token) && def(token_secret)) {
 			res.json({logged_in, request_token});
 		} else {
-			errored(Twitter.getRequestToken).then(function(info) {
+			var callbackURL = req.query.callback;
+			errored((res,rej) => Twitter.getRequestToken(callbackURL,res,rej)).then(function(info) {
 				var data = info.content;
 				var json = QueryItem.dictionaryFromString(data);
 				if (!def(json.oauth_token)) {

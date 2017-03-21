@@ -42,3 +42,7 @@ input[type=button] {
 .faded {
 	opacity: 0.15;
 }
+#needs-auth, #show-error, #needs-access {
+	padding:40px;
+	text-align:center;
+}
