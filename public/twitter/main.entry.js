@@ -83,7 +83,7 @@
 	var ACTIONS = {
 	  ADD_TWEET: "ADD_TWEET", // tweet
 	  UPDATE_TWEET_HTML: "UPDATE_TWEET_HTML", // id_str, html
-	  UPDATE_TEXT: "UPDATE_TEXT", // propKey, text
+	  UPDATE_VALUE: "UPDATE_VALUE", // propKey, value
 	  LOGGED_IN: "LOGGED_IN", // no params
 	  GOT_REQUEST_TOKEN: "GOT_REQUEST_TOKEN"
 	};
@@ -105,7 +105,8 @@
 	  logged_in:true,
 	  request_token:...,
 	  verifier:...,
-	  error:...
+	  error:...,
+	  show_stream_error:...
 	}
 	*/
 
@@ -170,9 +171,9 @@
 	        request_token: action.request_token
 	      });
 	      break;
-	    case ACTIONS.UPDATE_TEXT:
+	    case ACTIONS.UPDATE_VALUE:
 	      var json = {};
-	      json[action.propKey] = action.text;
+	      json[action.propKey] = action.value;
 	      return (0, _wirchoUtilities.mutate)(state, json);
 	      break;
 	    default:
@@ -201,8 +202,8 @@
 	    //     dispatch(setInfo());
 	    //   });
 	    // }
-	    updateText: function updateText(propKey, text) {
-	      dispatch({ type: ACTIONS.UPDATE_TEXT, propKey: propKey, text: text });
+	    updateValue: function updateValue(propKey, value) {
+	      dispatch({ type: ACTIONS.UPDATE_VALUE, propKey: propKey, value: value });
 	    }
 	  };
 	};
@@ -234,7 +235,8 @@
 	        importantUserList: this.props.importantUserList,
 	        defaultsKeywordList: this.props.defaultsKeywordList,
 	        defaultsImportantUserList: this.props.defaultsImportantUserList,
-	        updateText: this.props.updateText
+	        updateValue: this.props.updateValue,
+	        show_stream_error: this.props.show_stream_error
 	      });
 	    }
 	  }
@@ -317,6 +319,11 @@
 	var ActualApp = _react2.default.createClass({
 	  displayName: 'ActualApp',
 
+	  retry: function retry(event) {
+	    event.preventDefault();
+	    this.props.updateValue("show_stream_error", false);
+	    beginLoading();
+	  },
 	  logOut: function logOut(event) {
 	    event.preventDefault();
 	    (0, _wirchoWebUtilities.request)("GET", base_url + "/twitter/log_out").onLoad(function (info) {
@@ -352,6 +359,17 @@
 	      { id: 'inner-content' },
 	      _react2.default.createElement(
 	        'div',
+	        { id: 'errory', className: classNames({ hidden: this.props.show_stream_error !== true }) },
+	        'Stream error. ',
+	        _react2.default.createElement(
+	          'a',
+	          { href: '', className: 'retry', onClick: this.retry },
+	          'Retry'
+	        ),
+	        ' or reload page.'
+	      ),
+	      _react2.default.createElement(
+	        'div',
 	        { id: 'topy' },
 	        _react2.default.createElement(
 	          'a',
@@ -373,7 +391,7 @@
 	          defaultsPropKey: 'defaultsKeywordList',
 	          text: this.props.keywordList,
 	          defaultsText: this.props.defaultsKeywordList,
-	          updateText: this.props.updateText
+	          updateValue: this.props.updateValue
 	        }),
 	        normalTweets
 	      ),
@@ -391,7 +409,7 @@
 	          defaultsPropKey: 'defaultsImportantUserList',
 	          text: this.props.importantUserList,
 	          defaultsText: this.props.defaultsImportantUserList,
-	          updateText: this.props.updateText
+	          updateValue: this.props.updateValue
 	        }),
 	        importantTweets
 	      )
@@ -410,12 +428,12 @@
 	  displayName: 'FilterInput',
 
 	  handleChange: function handleChange(e) {
-	    this.props.updateText(this.props.propKey, e.target.value);
+	    this.props.updateValue(this.props.propKey, e.target.value);
 	  },
 	  handleClickUpdate: function handleClickUpdate() {
 	    _wirchoUtilities.defaults.set(this.props.propKey, this.props.text);
 	    this.textarea.focus();
-	    this.props.updateText(this.props.defaultsPropKey, this.props.text);
+	    this.props.updateValue(this.props.defaultsPropKey, this.props.text);
 	  },
 	  render: function render() {
 	    var _this = this;
@@ -493,12 +511,12 @@
 	    if ((0, _wirchoUtilities.def)(info.request.response.error)) {
 	      //console.log("AUTH STATUS OBTAINED: ERROR " + info.request.response.error);
 	      //setTimeout(function(){
-	      store.dispatch({ type: ACTIONS.UPDATE_TEXT, propKey: "error", text: info.request.response.error });
+	      store.dispatch({ type: ACTIONS.UPDATE_VALUE, propKey: "error", value: info.request.response.error });
 	      //},15000);
 	    } else if (!(0, _wirchoUtilities.def)(info.request.response.logged_in)) {
 	      // console.log("AUTH STATUS OBTAINED: ERROR Bad auth_status answer");
 	      // setTimeout(function(){
-	      store.dispatch({ type: ACTIONS.UPDATE_TEXT, propKey: "error", text: "Bad auth_status answer" });
+	      store.dispatch({ type: ACTIONS.UPDATE_VALUE, propKey: "error", value: "Bad auth_status answer" });
 	      // },15000);
 	    } else if (info.request.response.logged_in) {
 	      // console.log("AUTH STATUS OBTAINED: LOGGED IN!");
@@ -508,7 +526,7 @@
 	    } else if (!(0, _wirchoUtilities.def)(info.request.response.request_token)) {
 	      // console.log("AUTH STATUS OBTAINED: ERROR No request token");
 	      // setTimeout(function(){
-	      store.dispatch({ type: ACTIONS.UPDATE_TEXT, propKey: "error", text: "No request token" });
+	      store.dispatch({ type: ACTIONS.UPDATE_VALUE, propKey: "error", value: "No request token" });
 	      // },15000);
 	    } else {
 	      // console.log("AUTH STATUS OBTAINED: request_token " + info.request.response.request_token);
@@ -519,7 +537,7 @@
 	  }).onError(function (info) {
 	    // console.log("AUTH STATUS OBTAINED: ERROR Error loading auth_status URL.");
 	    // setTimeout(function(){
-	    store.dispatch({ type: ACTIONS.UPDATE_TEXT, propKey: "error", text: "Error loading auth_status URL." });
+	    store.dispatch({ type: ACTIONS.UPDATE_VALUE, propKey: "error", value: "Error loading auth_status URL." });
 	    // },15000);
 	  }).send();
 	}
@@ -565,6 +583,12 @@
 	        return;
 	      }
 	    }
+	  }).onError(function (info) {
+	    console.log("Got stream error!");
+	    store.dispatch({ type: ACTIONS.UPDATE_VALUE, propKey: "show_stream_error", value: true });
+	  }).onEnd(function (info) {
+	    console.log("Stream ended!");
+	    store.dispatch({ type: ACTIONS.UPDATE_VALUE, propKey: "show_stream_error", value: true });
 	  }).send();
 	}
 
@@ -40719,6 +40743,11 @@
 	    req.onload = function() {
 	      r.loadMaybe.resolve({request: req});
 	    };
+	    req.onreadystatechange = function() {
+	      if (req.readyState === 4) { // Ended
+	        r.endMaybe.resolve({request: req});
+	      }
+	    }
 	    if (r.dataCallbacks.length > 0) {
 	      var responseCaret = 0;
 	      req.addEventListener('progress', function() {
@@ -40779,28 +40808,31 @@
 	        if (r.needsLoadedData) {
 	          body += d;
 	        }
-	        var info = {data: d, response};
+	        var info = {data: d, response, request:req};
 	        for (var i=0; i<r.dataCallbacks.length; i+=1) {
 	          var c = r.dataCallbacks[i];
 	          c(info);
 	        }
 	      });
-	      if (r.needsLoadedData) {
-	        response.on("end", function(d) {
+	      
+	      response.on("end", function(d) {
+	        r.endMaybe.resolve({response,request:req});
+	        if (r.needsLoadedData) {
 	          if (r.responseType === "json") {
 	            var json = undefined;
 	            try {
 	              json = JSON.parse(body);
 	            } catch (e) {
-	              r.loadMaybe.resolve({content:body,response});
+	              r.loadMaybe.resolve({content:body,response,request:req});
 	              return;
 	            }
-	            r.loadMaybe.resolve({content:json,response});
+	            r.loadMaybe.resolve({content:json,response,request:req});
 	          } else {
-	            r.loadMaybe.resolve({content:body,response});
+	            r.loadMaybe.resolve({content:body,response,request:req});
 	          }
-	        });
-	      }
+	        }
+	      });
+	      
 	    });
 	    req.on("error", function(error) {
 	      r.errorMaybe.resolve(error);
@@ -40841,6 +40873,7 @@
 	  this.sent = false;
 	  this.loadMaybe = new Maybe();
 	  this.errorMaybe = new Maybe();
+	  this.endMaybe = new Maybe();
 	  this.dataCallbacks = new Array();
 
 	  this.needsLoadedData = false;
@@ -40905,6 +40938,11 @@
 	  this.onLoad = function(callback) {
 	    this.needsLoadedData = true;
 	    this.loadMaybe.promise.then(callback);
+	    return this;
+	  };
+
+	  this.onEnd = function(callback) {
+	    this.endMaybe.promise.then(callback);
 	    return this;
 	  };
 

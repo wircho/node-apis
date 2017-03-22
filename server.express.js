@@ -247,12 +247,39 @@ app.get('/twitter/stream/user', function(req,res) {
 	}
 	var access_token = req.session.twitter.access_token;
 	var token_secret = req.session.twitter.token_secret;
+	var firstData = true;
+	var foundError = false;
+
+	var twitterRequest = undefined;
+	var closedConnection = false;
+	req.on("close", function(err) {
+		console.log("CONNECTION WAS CLOSED!");
+		closedConnection = true;
+		if (def(twitterRequest)) {
+			console.log("REQUEST WAS ABORTED!");
+			twitterRequest.abort();
+		}
+	});
 	Twitter.streamUserFeed(req.query,access_token,token_secret,function(info) {
-		console.log("STREAM DATA: " + info.data);
-		res.write(info.data);
+		console.log("STREAM DATA: " + JSON.stringify({data:info.data + ""}));
+		if (firstData) {
+			twitterRequest = info.request;
+			if (closedConnection || (info.data + "").substring(0,1) !== "{") {
+				console.log("CONNECTION WAS CLOSED & REQUEST WAS ABORTED BEFORE FIRST RESPONSE!");
+				foundError = true;
+				info.request.abort();
+				res.end();
+				return;
+			}
+		}
+		firstData = false;
+		if (!foundError && !closedConnection) {
+			res.write(info.data);
+		}
 	},function(error) {
 		console.log("STREAM ERROR!");
 		res.write("<<<ERROR>>>\n");
+		res.end();
 	});
 });
 

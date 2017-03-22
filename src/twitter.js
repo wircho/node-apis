@@ -41,7 +41,7 @@ RequestHelpers.use(RequestFrontEndHelpers);
 const ACTIONS = {
   ADD_TWEET:"ADD_TWEET", // tweet
   UPDATE_TWEET_HTML:"UPDATE_TWEET_HTML", // id_str, html
-  UPDATE_TEXT:"UPDATE_TEXT", // propKey, text
+  UPDATE_VALUE:"UPDATE_VALUE", // propKey, value
   LOGGED_IN:"LOGGED_IN", // no params
   GOT_REQUEST_TOKEN:"GOT_REQUEST_TOKEN"
 }
@@ -63,7 +63,8 @@ console.log("base: " + base_url);
   logged_in:true,
   request_token:...,
   verifier:...,
-  error:...
+  error:...,
+  show_stream_error:...
 }
 */
 
@@ -134,9 +135,9 @@ function app(state,action) {
         request_token: action.request_token
       });
     break;
-    case ACTIONS.UPDATE_TEXT:
+    case ACTIONS.UPDATE_VALUE:
       var json = {};
-      json[action.propKey] = action.text;
+      json[action.propKey] = action.value;
       return mutate(
         state,
         json
@@ -165,8 +166,8 @@ const mapDispatchToProps = (dispatch) => ({
   //     dispatch(setInfo());
   //   });
   // }
-  updateText: (propKey,text) => {
-    dispatch({type:ACTIONS.UPDATE_TEXT, propKey, text});
+  updateValue: (propKey,value) => {
+    dispatch({type:ACTIONS.UPDATE_VALUE, propKey, value});
   }
 });
 
@@ -195,7 +196,8 @@ const App = React.createClass({
         importantUserList={this.props.importantUserList}
         defaultsKeywordList={this.props.defaultsKeywordList}
         defaultsImportantUserList={this.props.defaultsImportantUserList}
-        updateText={this.props.updateText}
+        updateValue={this.props.updateValue}
+        show_stream_error={this.props.show_stream_error}
       />;
     }
   }
@@ -240,6 +242,11 @@ const NeedsAccessToken = React.createClass({
 });
 
 const ActualApp = React.createClass({
+  retry: function(event) {
+    event.preventDefault();
+    this.props.updateValue("show_stream_error",false);
+    beginLoading();
+  },
   logOut: function(event) {
     event.preventDefault();
     request("GET",base_url + "/twitter/log_out").onLoad(function(info) {
@@ -272,6 +279,9 @@ const ActualApp = React.createClass({
 
     return (
       <div id="inner-content">
+        <div id="errory" className={classNames({hidden:this.props.show_stream_error !== true})}>
+          Stream error. <a href="" className="retry" onClick={this.retry}>Retry</a> or reload page.
+        </div>
         <div id="topy">
           <a href="" className="logout" onClick={this.logOut}>Log Out</a>
         </div>
@@ -283,7 +293,7 @@ const ActualApp = React.createClass({
             defaultsPropKey="defaultsKeywordList"
             text={this.props.keywordList}
             defaultsText={this.props.defaultsKeywordList}
-            updateText={this.props.updateText}
+            updateValue={this.props.updateValue}
           />
           {normalTweets}
         </div>
@@ -295,7 +305,7 @@ const ActualApp = React.createClass({
             defaultsPropKey="defaultsImportantUserList"
             text={this.props.importantUserList}
             defaultsText={this.props.defaultsImportantUserList}
-            updateText={this.props.updateText}
+            updateValue={this.props.updateValue}
           />
           {importantTweets}
         </div>
@@ -313,12 +323,12 @@ const ActualApp = React.createClass({
 
 const FilterInput = React.createClass({
   handleChange: function(e) {
-    this.props.updateText(this.props.propKey,e.target.value);
+    this.props.updateValue(this.props.propKey,e.target.value);
   },
   handleClickUpdate: function() {
     defaults.set(this.props.propKey,this.props.text);
     this.textarea.focus();
-    this.props.updateText(this.props.defaultsPropKey,this.props.text);
+    this.props.updateValue(this.props.defaultsPropKey,this.props.text);
   },
   render: function() {
     var text = nullFallback(this.props.text,"");
@@ -370,12 +380,12 @@ function checkTwitterAuthStatus() {
     if (def(info.request.response.error)) {
       //console.log("AUTH STATUS OBTAINED: ERROR " + info.request.response.error);
       //setTimeout(function(){
-      store.dispatch({type:ACTIONS.UPDATE_TEXT, propKey:"error", text:info.request.response.error});
+      store.dispatch({type:ACTIONS.UPDATE_VALUE, propKey:"error", value:info.request.response.error});
       //},15000);
     } else if (!def(info.request.response.logged_in)) {
       // console.log("AUTH STATUS OBTAINED: ERROR Bad auth_status answer");
       // setTimeout(function(){
-      store.dispatch({type:ACTIONS.UPDATE_TEXT, propKey:"error", text:"Bad auth_status answer"});
+      store.dispatch({type:ACTIONS.UPDATE_VALUE, propKey:"error", value:"Bad auth_status answer"});
       // },15000);
     } else if (info.request.response.logged_in) {
       // console.log("AUTH STATUS OBTAINED: LOGGED IN!");
@@ -385,7 +395,7 @@ function checkTwitterAuthStatus() {
     } else if (!def(info.request.response.request_token)) {
       // console.log("AUTH STATUS OBTAINED: ERROR No request token");
       // setTimeout(function(){
-      store.dispatch({type:ACTIONS.UPDATE_TEXT, propKey:"error", text:"No request token"});
+      store.dispatch({type:ACTIONS.UPDATE_VALUE, propKey:"error", value:"No request token"});
       // },15000);
     } else {
       // console.log("AUTH STATUS OBTAINED: request_token " + info.request.response.request_token);
@@ -396,7 +406,7 @@ function checkTwitterAuthStatus() {
   }).onError(function(info) {
     // console.log("AUTH STATUS OBTAINED: ERROR Error loading auth_status URL.");
     // setTimeout(function(){
-    store.dispatch({type:ACTIONS.UPDATE_TEXT, propKey:"error", text:"Error loading auth_status URL."});
+    store.dispatch({type:ACTIONS.UPDATE_VALUE, propKey:"error", value:"Error loading auth_status URL."});
     // },15000);
   }).send();
 }
@@ -442,6 +452,12 @@ function beginLoading() {
         return;
       }
     }
+  }).onError(function(info) {
+    console.log("Got stream error!");
+    store.dispatch({type:ACTIONS.UPDATE_VALUE, propKey:"show_stream_error", value:true});
+  }).onEnd(function(info) {
+    console.log("Stream ended!");
+    store.dispatch({type:ACTIONS.UPDATE_VALUE, propKey:"show_stream_error", value:true});
   }).send();
 }
 
