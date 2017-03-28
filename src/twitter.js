@@ -350,7 +350,7 @@ const Tweet = React.createClass({
     } else {
       var id_str = this.props.tweet.id_str;
       var url = "https://twitter.com/" + this.props.tweet.user.screen_name + "/status/" + id_str;
-      request("GET",base_url + "/twitter/oembed","json").setParam("url",url).onLoad(function(info) {
+      request("GET",base_url + "/twitter/oembed","json").setParam("theme","dark").setParam("url",url).setParam("omit_script","1").onLoad(function(info) {
         if (def(info.request.response) && def(info.request.response.html)) {
           store.dispatch({type:ACTIONS.UPDATE_TWEET_HTML, id_str:id_str, html:info.request.response.html});
         }
@@ -367,7 +367,8 @@ const Tweet = React.createClass({
   render: function() {
     var c = classNames({faded: false || this.props.fade});
     if (def(this.props.embed_html)) {
-      var htmlJSON = {__html:this.props.embed_html};
+      var html = this.props.embed_html.replace("<blockquote ","<blockquote data-theme=\"dark\" ");
+      var htmlJSON = {__html:html};
       return (<div className={c} dangerouslySetInnerHTML={htmlJSON}/>);
     } else {
       return (<div className={c}><blockquote><p>{this.props.tweet.text}</p>&mdash; {this.props.tweet.user.name} (@{this.props.tweet.user.screen_name})</blockquote></div>)

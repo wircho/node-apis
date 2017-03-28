@@ -464,7 +464,7 @@
 	    } else {
 	      var id_str = this.props.tweet.id_str;
 	      var url = "https://twitter.com/" + this.props.tweet.user.screen_name + "/status/" + id_str;
-	      (0, _wirchoWebUtilities.request)("GET", base_url + "/twitter/oembed", "json").setParam("url", url).onLoad(function (info) {
+	      (0, _wirchoWebUtilities.request)("GET", base_url + "/twitter/oembed", "json").setParam("theme", "dark").setParam("url", url).setParam("omit_script", "1").onLoad(function (info) {
 	        if ((0, _wirchoUtilities.def)(info.request.response) && (0, _wirchoUtilities.def)(info.request.response.html)) {
 	          store.dispatch({ type: ACTIONS.UPDATE_TWEET_HTML, id_str: id_str, html: info.request.response.html });
 	        }
@@ -481,7 +481,8 @@
 	  render: function render() {
 	    var c = classNames({ faded: false || this.props.fade });
 	    if ((0, _wirchoUtilities.def)(this.props.embed_html)) {
-	      var htmlJSON = { __html: this.props.embed_html };
+	      var html = this.props.embed_html.replace("<blockquote ", "<blockquote data-theme=\"dark\" ");
+	      var htmlJSON = { __html: html };
 	      return _react2.default.createElement('div', { className: c, dangerouslySetInnerHTML: htmlJSON });
 	    } else {
 	      return _react2.default.createElement(
@@ -40662,44 +40663,29 @@
 	function URLComponents(url) {
 	  if (def(url)) {
 	    var u = url;
-	    console.log("- Parsing URL " + u);
 	    var hashSplit = u.split("#");
 	    if (hashSplit.length > 1) {
 	      u = hashSplit.shift();
-	      console.log("- New URL " + u);
 	      this.fragment = hashSplit.join("#");
-	      console.log("- Fragment " + this.fragment);
-	    } else {
-	      console.log("- No fragment found. URL remains " + u);
 	    }
 	    var qSplit = u.split("?");
 	    if (qSplit.length > 1) {
 	      u = qSplit.shift();
-	      console.log("- New URL " + u);
 	      this.params = QueryItem.arrayFromString(qSplit.join("?"));
-	      console.log("- Params: " + this.params);
 	    } else {
-	      console.log("- No params found. URL remains " + u);
 	      this.params = new Array();
 	    }
 	    var bSplit = u.split("://");
 	    if (bSplit.length > 1) {
 	      this.protocol = bSplit.shift();
 	      u = bSplit.join("://");
-	      console.log("- New URL " + u);
-	      console.log("- Protocol: " + this.protocol);
 	    } else {
-	      console.log("- No protocol found. URL remains " + u);
 	      this.protocol = "http";
 	    }
 	    var pSplit = u.split("/");
 	    if (pSplit.length > 1) {
 	      u = pSplit.shift();
-	      console.log("- New URL " + u);
 	      this.path = "/" + pSplit.join("/");
-	      console.log("- Path: " + this.path);
-	    } else {
-	      console.log("- No path found. URL remains " + u);
 	    }
 	    this.base = u;
 	  };
@@ -40766,8 +40752,6 @@
 	    return req;
 	  }.bind(null),
 	  openHTTPRequest: function(r) {
-	    console.log("calling openHTTPRequest on:");
-	    console.log(r);
 	    r.req.open(r.method, r.getURL());
 	    loop(r.headers,function(key,value) {
 	      r.req.setRequestHeader(key,value);
@@ -40795,7 +40779,6 @@
 	    if (r.method === "GET" || r.method === "HEAD") {
 	      var queryString = QueryItem.stringFromArray(r.getAllParams());
 	      path = path + "?" + queryString;
-	      console.log("NEW PATH: " + path);
 	    }
 	    var req = proto.request({
 	      method: r.method,
@@ -40929,8 +40912,6 @@
 	    if (this.opened) { return this; }
 	    this.opened = true;
 	    createReq();
-	    console.log("calling open on:");
-	    console.log(this);
 	    RequestHelpers.using.openHTTPRequest(this);
 	    return this;
 	  };
