@@ -433,8 +433,8 @@
 	      null,
 	      _react2.default.createElement(Input, { updateImage: this.props.updateImage, getClarifaiTags: this.props.getClarifaiTags, getGoogleTags: this.props.getGoogleTags }),
 	      _react2.default.createElement(DowloadedImage, { image: this.props.image }),
-	      _react2.default.createElement(ClarifaiKeys, { response: this.props.clarifai_response }),
-	      _react2.default.createElement(GoogleKeys, { response: this.props.google_response })
+	      _react2.default.createElement(ClarifaiTags, { response: this.props.clarifai_response }),
+	      _react2.default.createElement(GoogleTags, { response: this.props.google_response })
 	    );
 	  }
 	});
@@ -472,12 +472,12 @@
 	  }
 	});
 
-	var ClarifaiKeys = _react2.default.createClass({
-	  displayName: 'ClarifaiKeys',
+	var ClarifaiTags = _react2.default.createClass({
+	  displayName: 'ClarifaiTags',
 
 	  render: function render() {
 	    if ((0, _wirchoUtilities.def)(this.props.response)) {
-	      var title = "Clarifai Keys:";
+	      var title = "Clarifai Tags:";
 	      var response = this.props.response;
 	      if (isstring(response)) {
 	        return _react2.default.createElement(
@@ -547,12 +547,12 @@
 	  }
 	});
 
-	var GoogleKeys = _react2.default.createClass({
-	  displayName: 'GoogleKeys',
+	var GoogleTags = _react2.default.createClass({
+	  displayName: 'GoogleTags',
 
 	  render: function render() {
 	    if ((0, _wirchoUtilities.def)(this.props.response)) {
-	      var title = "Google Keys:";
+	      var title = "Google Tags:";
 	      if (isstring(this.props.response)) {
 	        return _react2.default.createElement(
 	          'div',

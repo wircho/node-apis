@@ -383,8 +383,8 @@ const ActualApp = React.createClass({
     return <div>
       <Input updateImage={this.props.updateImage} getClarifaiTags={this.props.getClarifaiTags} getGoogleTags={this.props.getGoogleTags}/>
       <DowloadedImage image={this.props.image}/>
-      <ClarifaiKeys response={this.props.clarifai_response}/>
-      <GoogleKeys response={this.props.google_response}/>
+      <ClarifaiTags response={this.props.clarifai_response}/>
+      <GoogleTags response={this.props.google_response}/>
     </div>
   }
 });
@@ -412,10 +412,10 @@ const DowloadedImage = React.createClass({
   }
 });
 
-const ClarifaiKeys = React.createClass({
+const ClarifaiTags = React.createClass({
   render: function() {
     if (def(this.props.response)) {
-      const title = "Clarifai Keys:";
+      const title = "Clarifai Tags:";
       var response = this.props.response;
       if (isstring(response)) {
         return (<div><h3>{title} {response}</h3></div>);
@@ -449,10 +449,10 @@ const ClarifaiKeys = React.createClass({
   }
 });
 
-const GoogleKeys = React.createClass({
+const GoogleTags = React.createClass({
   render: function() {
     if (def(this.props.response)) {
-      const title = "Google Keys:";
+      const title = "Google Tags:";
       if (isstring(this.props.response)) {
         return (<div><h3>{title} {this.props.response}</h3></div>);
       } else {
