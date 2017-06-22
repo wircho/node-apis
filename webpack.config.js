@@ -5,6 +5,7 @@ module.exports = {
   entry: {
     main:'./src/main.js',
     "twitter/main":'./src/twitter.js',
+    "tagging/main":'./src/tagging.js',
   },
   output: { path: './public', filename: '[name].entry.js' },
   module: {

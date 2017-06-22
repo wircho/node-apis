@@ -44,12 +44,19 @@ import {
   Twitter
 } from 'wircho-web-utilities';
 
+//Local Terminal Command
+//MONGODB_URI=mongodb://localhost:27017 MONGODB_SECRET=*** TWITTER_KEY=*** TWITTER_SECRET=*** TWITTER_CALLBACK=http://wircho.com CLARIFAI_KEY=??? npm start
+
+//Clear Cache Command
+//
+
 //Settings
 RequestHelpers.use(RequestBackEndHelpers);
 
 //Database+Session
 const MONGODB_URI = fallback(process.env.MONGODB_URI);
 const MONGODB_SECRET = fallback(process.env.MONGODB_SECRET);
+const CLARIFAI_KEY = fallback(process.env.CLARIFAI_KEY);
 mongoose.connect(MONGODB_URI, function(error) {
 	if (error) {
 		console.log("Error connecting to Mongo:");
@@ -307,6 +314,36 @@ app.get('/stream_test', function(req,res) {
 	}
 	doNext();
 })
+
+// Clarifai info
+app.get('/clarifai/info', function(req,res) {
+	const url = req.query['url'];
+	var body = querystring.stringify({url});
+	var req = https.request({
+		host: "api.clarifai.com",
+		path: "/v1/tag/",
+		method: "POST",
+		headers: {
+			"Authorization": "Bearer " + CLARIFAI_KEY,
+			"Content-Type": "application/x-www-form-urlencoded",
+			"Content-Length": Buffer.byteLength(body)
+		}
+	}, (response) => {
+		var body = "";
+		response.on("data", function(d) {
+			body += d;
+		});
+		response.on("end", function() {
+			var json = JSON.parse(body);
+			res.json(json);
+		});
+	});
+	req.on("error", (error) => {
+		res.json(errdict(error));
+	});
+	req.write(body);
+	req.end();
+});
 
 //Server
 app.listen(process.env.PORT || 8080);
