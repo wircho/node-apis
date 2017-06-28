@@ -422,15 +422,14 @@ const ClarifaiTags = React.createClass({
       } else {
         console.log(title);
         console.log(response);
-        var tag = (def(response.results) && response.results.length > 0 && def(response.results[0].result)) ? response.results[0].result.tag : undefined;
-        console.log("tag:");
-        console.log(tag);
-        if (def(tag) && def(tag.classes) && def(tag.probs) && tag.classes.length > 0 && tag.classes.length == tag.probs.length) {
+        var concepts = (def(response.outputs) && response.outputs.length > 0 && def(response.outputs[0].data) && def(response.outputs[0].data.concepts)) ? response.outputs[0].data.concepts : undefined;
+        console.log("concepts:");
+        console.log(concepts);
+        if (def(concepts)) {
           var tagElements = [];
-          for (var i=0; i<tag.classes.length; i+=1) {
-            var cls = tag.classes[i];
-            var prb = tag.probs[i];
-            tagElements.push(<div key={i}>{cls}: {prb}</div>);
+          for (var i=0; i<concepts.length; i+=1) {
+            var cpt = concepts[i];
+            tagElements.push(<div key={i}>{cpt.name}: {cpt.value}</div>);
           }
           return (<div>
             <h3>{title}</h3>

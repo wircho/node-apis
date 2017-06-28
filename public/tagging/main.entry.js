@@ -494,20 +494,19 @@
 	      } else {
 	        console.log(title);
 	        console.log(response);
-	        var tag = (0, _wirchoUtilities.def)(response.results) && response.results.length > 0 && (0, _wirchoUtilities.def)(response.results[0].result) ? response.results[0].result.tag : undefined;
-	        console.log("tag:");
-	        console.log(tag);
-	        if ((0, _wirchoUtilities.def)(tag) && (0, _wirchoUtilities.def)(tag.classes) && (0, _wirchoUtilities.def)(tag.probs) && tag.classes.length > 0 && tag.classes.length == tag.probs.length) {
+	        var concepts = (0, _wirchoUtilities.def)(response.outputs) && response.outputs.length > 0 && (0, _wirchoUtilities.def)(response.outputs[0].data) && (0, _wirchoUtilities.def)(response.outputs[0].data.concepts) ? response.outputs[0].data.concepts : undefined;
+	        console.log("concepts:");
+	        console.log(concepts);
+	        if ((0, _wirchoUtilities.def)(concepts)) {
 	          var tagElements = [];
-	          for (var i = 0; i < tag.classes.length; i += 1) {
-	            var cls = tag.classes[i];
-	            var prb = tag.probs[i];
+	          for (var i = 0; i < concepts.length; i += 1) {
+	            var cpt = concepts[i];
 	            tagElements.push(_react2.default.createElement(
 	              'div',
 	              { key: i },
-	              cls,
+	              cpt.name,
 	              ': ',
-	              prb
+	              cpt.value
 	            ));
 	          }
 	          return _react2.default.createElement(

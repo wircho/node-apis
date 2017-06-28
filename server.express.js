@@ -13,6 +13,7 @@ var formidable 				= require('formidable');
 var fs 						= require('fs');
 const aws 					= require('aws-sdk');
 const querystring 			= require('querystring');
+const Clarifai 				= require('clarifai');
 import {
 //Utilities
   pad,
@@ -63,6 +64,9 @@ mongoose.connect(MONGODB_URI, function(error) {
 		console.log(error);
 	}
 });
+
+const db = mongoose.connection;
+
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
 app.use(cookieParser());
@@ -72,7 +76,7 @@ app.use(session({
     resave: true,
     saveUninitialized: true,
     store:new MongoStore({
-    	mongooseConnection: mongoose.connection,
+    	mongooseConnection: db,
         collection: 'session', 
         auto_reconnect:true
     })
@@ -316,8 +320,22 @@ app.get('/stream_test', function(req,res) {
 })
 
 // Clarifai info
+const cai = new Clarifai.App({
+	apiKey: 'CLARIFAI_KEY'
+});
 app.get('/clarifai/info', function(req,res) {
 	const url = req.query['url'];
+
+	cai.models.predict(Clarifai.GENERAL_MODEL, url).then(
+		function(response) {
+			res.json(response);
+		},
+		function(err) {
+			res.json(errdict(error));
+		}
+	);
+
+/*
 	var body = querystring.stringify({url});
 	var req = https.request({
 		host: "api.clarifai.com",
@@ -343,6 +361,7 @@ app.get('/clarifai/info', function(req,res) {
 	});
 	req.write(body);
 	req.end();
+*/
 });
 
 //Server
