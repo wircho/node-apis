@@ -321,7 +321,7 @@ app.get('/stream_test', function(req,res) {
 
 // Clarifai info
 const cai = new Clarifai.App({
-	apiKey: 'CLARIFAI_KEY'
+	apiKey: CLARIFAI_KEY
 });
 app.get('/clarifai/info', function(req,res) {
 	const url = req.query['url'];
