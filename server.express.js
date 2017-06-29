@@ -47,7 +47,7 @@ import {
 } from 'wircho-web-utilities';
 
 //Local Terminal Command
-//MONGODB_URI=mongodb://localhost:27017 MONGODB_SECRET=*** TWITTER_KEY=*** TWITTER_SECRET=*** TWITTER_CALLBACK=http://wircho.com CLARIFAI_KEY=??? npm start
+//MONGODB_URI=mongodb://localhost:27017 MONGODB_SECRET=*** TWITTER_KEY=*** TWITTER_SECRET=*** TWITTER_CALLBACK=http://wircho.com CLARIFAI_KEY=??? GOOGLE_VISION_FILE_PATH=../mv-2f70dc320c4b.json npm start
 
 //Clear Cache Command
 //
@@ -351,12 +351,10 @@ const gv = vision({
   projectId: 'mokriya-vision',
   keyFilename: process.env.GOOGLE_VISION_FILE_PATH
 });
-
-gv.detectText('./text.jpg', function(err, text) {
-  console.log("error:");
-  console.log(err);
-  console.log("text:");
-  console.log(text);
+app.get('/google-vision/tags', function(req,res) {
+	gv.detectText('./text.jpg', function(err, text) {
+  		res.json({err:""+err, text});
+	});
 });
 
 

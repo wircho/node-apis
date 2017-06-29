@@ -259,7 +259,7 @@
 	    }*/
 	    getClarifaiTags: function getClarifaiTags(url) {
 	      dispatch({ type: ACTIONS.UPDATE_CLARIFAI_RESPONSE, response: "Loading..." });
-	      var rurl = base_url + "/clarifai/info?url=" + encodeURIComponent(url);
+	      var rurl = base_url + "/clarifai/tags?url=" + encodeURIComponent(url);
 	      var r = (0, _wirchoWebUtilities.request)("GET", rurl, "json");
 	      r.onLoad(function (info) {
 	        dispatch({ type: ACTIONS.UPDATE_CLARIFAI_RESPONSE, response: info.request.response });
