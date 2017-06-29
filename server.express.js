@@ -353,7 +353,8 @@ const gv = vision({
   keyFilename: process.env.GOOGLE_VISION_FILE_PATH
 });
 app.get('/google-vision/tags', function(req,res) {
-	gv.detectText('./text.jpg', function(err, text) {
+	const url = req.query['url'];
+	gv.detectText(url, function(err, text) {
   		res.json({err:""+err, text});
 	});
 });
