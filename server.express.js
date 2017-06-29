@@ -338,13 +338,14 @@ app.get('/clarifai/tags', function(req,res) {
 
 // Google Vision tags
 if (!fs.existsSync(process.env.GOOGLE_VISION_FILE_PATH)) {
-	var keys = process.env.GOOGLE_VISION_KEYS.split(",");
-	var values = keys.map((key) => process.env[process.env.GOOGLE_VISION_PREFIX + key].replace("\\n","\n"));
-	var dict = {};
-	for (var i=0; i<keys.length; i+=1) {
-		dict[keys[i]] = values[i];
-	}
-	fs.writeFileSync(process.env.GOOGLE_VISION_FILE_PATH, JSON.stringify(dict, null, "\t"));
+	var text = JSON.parse(process.env.GOOGLE_VISION_FILE_INFO).text;
+	// var keys = process.env.GOOGLE_VISION_KEYS.split(",");
+	// var values = keys.map((key) => process.env[process.env.GOOGLE_VISION_PREFIX + key].replace("\\n","\n"));
+	// var dict = {};
+	// for (var i=0; i<keys.length; i+=1) {
+	// 	dict[keys[i]] = values[i];
+	// }
+	fs.writeFileSync(process.env.GOOGLE_VISION_FILE_PATH, text);
 }
 
 const gv = vision({
