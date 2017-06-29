@@ -344,7 +344,7 @@ if (!fs.existsSync(process.env.GOOGLE_VISION_FILE_PATH)) {
 	for (var i=0; i<keys.length; i+=1) {
 		dict[keys[i]] = values[i];
 	}
-	fs.writeFileSync(process.env.GOOGLE_VISION_FILE_PATH, JSON.stringify(dict));
+	fs.writeFileSync(process.env.GOOGLE_VISION_FILE_PATH, JSON.stringify(dict, null, "\t"));
 }
 
 const gv = vision({
