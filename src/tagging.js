@@ -215,7 +215,7 @@ const mapDispatchToProps = (dispatch) => ({
   }*/
   getClarifaiTags: (url) => {
     dispatch({type: ACTIONS.UPDATE_CLARIFAI_RESPONSE, response: "Loading..."});
-    var rurl = base_url + "/clarifai/info?url=" + encodeURIComponent(url);
+    var rurl = base_url + "/clarifai/tags?url=" + encodeURIComponent(url);
     var r = request("GET",rurl,"json");
     r.onLoad((info) => {
       dispatch({type: ACTIONS.UPDATE_CLARIFAI_RESPONSE, response: info.request.response});

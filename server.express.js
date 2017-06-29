@@ -14,6 +14,7 @@ var fs 						= require('fs');
 const aws 					= require('aws-sdk');
 const querystring 			= require('querystring');
 const Clarifai 				= require('clarifai');
+const vision 				= require('@google-cloud/vision');
 import {
 //Utilities
   pad,
@@ -57,7 +58,6 @@ RequestHelpers.use(RequestBackEndHelpers);
 //Database+Session
 const MONGODB_URI = fallback(process.env.MONGODB_URI);
 const MONGODB_SECRET = fallback(process.env.MONGODB_SECRET);
-const CLARIFAI_KEY = fallback(process.env.CLARIFAI_KEY);
 mongoose.connect(MONGODB_URI, function(error) {
 	if (error) {
 		console.log("Error connecting to Mongo:");
@@ -319,11 +319,11 @@ app.get('/stream_test', function(req,res) {
 	doNext();
 })
 
-// Clarifai info
+// Clarifai tags
 const cai = new Clarifai.App({
-	apiKey: CLARIFAI_KEY
+	apiKey: process.env.CLARIFAI_KEY
 });
-app.get('/clarifai/info', function(req,res) {
+app.get('/clarifai/tags', function(req,res) {
 	const url = req.query['url'];
 
 	cai.models.predict(Clarifai.GENERAL_MODEL, url).then(
@@ -334,35 +334,31 @@ app.get('/clarifai/info', function(req,res) {
 			res.json(errdict(error));
 		}
 	);
-
-/*
-	var body = querystring.stringify({url});
-	var req = https.request({
-		host: "api.clarifai.com",
-		path: "/v1/tag/",
-		method: "POST",
-		headers: {
-			"Authorization": "Bearer " + CLARIFAI_KEY,
-			"Content-Type": "application/x-www-form-urlencoded",
-			"Content-Length": Buffer.byteLength(body)
-		}
-	}, (response) => {
-		var body = "";
-		response.on("data", function(d) {
-			body += d;
-		});
-		response.on("end", function() {
-			var json = JSON.parse(body);
-			res.json(json);
-		});
-	});
-	req.on("error", (error) => {
-		res.json(errdict(error));
-	});
-	req.write(body);
-	req.end();
-*/
 });
+
+// Google Vision tags
+if (!fs.existsSync(process.env.GOOGLE_VISION_FILE_PATH)) {
+	var keys = process.env.GOOGLE_VISION_KEYS.split(",");
+	var values = keys.map((key) => process.env[process.env.GOOGLE_VISION_PREFIX + key].replace("\\n","\n"));
+	var dict = {};
+	for (var i=0; i<keys.length; i+=1) {
+		dict[keys[i]] = values[i];
+	}
+	fs.writeFileSync(process.env.GOOGLE_VISION_FILE_PATH, JSON.stringify(dict));
+}
+
+const gv = vision({
+  projectId: 'mokriya-vision',
+  keyFilename: process.env.GOOGLE_VISION_FILE_PATH
+});
+
+gv.detectText('./text.jpg', function(err, text) {
+  console.log("error:");
+  console.log(err);
+  console.log("text:");
+  console.log(text);
+});
+
 
 //Server
 app.listen(process.env.PORT || 8080);
