@@ -104,11 +104,26 @@ a.logout, a.logout:visited, a.login, a.login:visited, a.retry, a.retry:visited {
 a.logout, a.logout:visited, a.login, a.login:visited {
 	font-size:12pt;
 }
+#image-wrapper {
+	position:relative;
+	display: inline-block;
+}
 img {
-	height: 100px;
+	max-height: 300px;
 	min-width: 10px;
 	width: auto;
 	background-color: black;
-	margin: 30px;
 	border-style: none;
+}
+.face {
+	border-style: solid;
+	border-width: 1px;
+	border-color: red;
+	position: absolute;
+}
+.head {
+	border-style: solid;
+	border-width: 1px;
+	border-color: green;
+	position: absolute;
 }

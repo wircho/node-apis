@@ -47,7 +47,9 @@ RequestHelpers.use(RequestFrontEndHelpers);
 const ACTIONS = {
   UPDATE_CLARIFAI_RESPONSE: "UPDATE_CLARIFAI_RESPONSE", // response (could be undefined)
   UPDATE_GOOGLE_RESPONSE: "UPDATE_GOOGLE_RESPONSE", // response (could be undefined)
-  UPDATE_IMAGE: "UPDATE_IMAGE" // url (could be undefined)
+  UPDATE_IMAGE: "UPDATE_IMAGE", // url (could be undefined)
+  UPDATE_IMAGE_SIZE: "UPDATE_IMAGE_SIZE", // width, height
+  UPDATE_GOOGLE_FACES: "UPDATE_GOOGLE_FACES" // faces
 }
 
 //Globals
@@ -59,6 +61,8 @@ var base_url = window.location.protocol + "//" + window.location.hostname + ":" 
   clarifai_response:...
   google_response:...
   image:...
+  image_size:{width: , height: }
+  google_faces:...
 }
 */
 
@@ -89,6 +93,20 @@ function app(state,action) {
         return remove(state, "image");
       }
       break;
+    case ACTIONS.UPDATE_IMAGE_SIZE:
+      if (def(action.width) && def(action.height)) {
+        return mutate(state, {image_size: {width: action.width, height: action.height}});
+      } else {
+        return remove(state, "image_size");
+      }
+      break;
+    case ACTIONS.UPDATE_GOOGLE_FACES:
+      if (def(action.faces)) {
+        return mutate(state, {google_faces: action.faces});
+      } else {
+        return remove(state, "google_faces");
+      }
+      break;
     default: return state;
     break;
   }
@@ -114,8 +132,19 @@ const mapDispatchToProps = (dispatch) => ({
       dispatch({type: ACTIONS.UPDATE_GOOGLE_RESPONSE, response: info.request.response});
     }).send();
   },
+  getGoogleFaces: (url) => {
+    dispatch({type: ACTIONS.UPDATE_GOOGLE_FACES});
+    var rurl = base_url + "/google-vision/faces?url=" + encodeURIComponent(url);
+    var r = request("GET",rurl,"json");
+    r.onLoad((info) => {
+      dispatch({type: ACTIONS.UPDATE_GOOGLE_FACES, faces: info.request.response});
+    }).send();
+  },
   updateImage: (url) => {
     dispatch({type: ACTIONS.UPDATE_IMAGE, url})
+  },
+  updateImageSize: (dict) => {
+    dispatch({type: ACTIONS.UPDATE_IMAGE_SIZE, width: dict.width, height: dict.height})
   }
 });
 
@@ -127,8 +156,12 @@ const App = React.createClass({
       google_response={this.props.google_response}
       getClarifaiTags={this.props.getClarifaiTags}
       getGoogleTags={this.props.getGoogleTags}
+      getGoogleFaces={this.props.getGoogleFaces}
       updateImage={this.props.updateImage}
       image={this.props.image}
+      image_size={this.props.image_size}
+      google_faces={this.props.google_faces}
+      updateImageSize={this.props.updateImageSize}
     />;
   }
 });
@@ -136,8 +169,8 @@ const App = React.createClass({
 const ActualApp = React.createClass({
   render: function() {
     return <div>
-      <Input updateImage={this.props.updateImage} getClarifaiTags={this.props.getClarifaiTags} getGoogleTags={this.props.getGoogleTags}/>
-      <DowloadedImage image={this.props.image}/>
+      <Input updateImage={this.props.updateImage} getClarifaiTags={this.props.getClarifaiTags} getGoogleTags={this.props.getGoogleTags} getGoogleFaces={this.props.getGoogleFaces} updateImageSize={this.props.updateImageSize}/>
+      <DowloadedImage image={this.props.image} image_size={this.props.image_size} google_faces={this.props.google_faces} updateImageSize={this.props.updateImageSize}/>
       <ClarifaiTags response={this.props.clarifai_response}/>
       <GoogleTags response={this.props.google_response}/>
     </div>
@@ -148,9 +181,12 @@ const Input = React.createClass({
   getTags: function(event) {
     event.preventDefault();
     var url = $("#url").val();
-    this.props.updateImage(url)
+    //this.props.updateImageSize({});
+    //this.props.updateImage("");
+    this.props.updateImage(url);
     this.props.getClarifaiTags(url);
     this.props.getGoogleTags(url);
+    this.props.getGoogleFaces(url);
   },
   render: function() {
     return <div>
@@ -161,9 +197,46 @@ const Input = React.createClass({
   }
 });
 
+function getBox(info, width, height, cls, key) {
+  var xs = info.map((p) => p.x);
+  var ys = info.map((p) => p.y);
+  var minX = Math.min.apply(null, xs);
+  var maxX = Math.max.apply(null, xs);
+  var minY = Math.min.apply(null, ys);
+  var maxY = Math.max.apply(null, ys);
+  var style = {
+    left: "" + (minX * 100 / width) + "%",
+    top: "" + (minY * 100 / height) + "%",
+    width: "" + ((maxX - minX)* 100 / width) + "%",
+    height: "" + ((maxY - minY)* 100 / height) + "%"
+  };
+  return <div className={cls} style={style} key={key}/>
+}
+
 const DowloadedImage = React.createClass({
+  onImgLoad: function({target: img}) {
+    console.log("LOADED IMAGE!");
+    this.props.updateImageSize({width: img.naturalWidth, height: img.naturalHeight});
+  },
   render: function() {
-    return <div><img src={this.props.image}/></div>
+    var faceElements = [];
+    if (def(this.props.image_size) && def(this.props.image_size.width) && def(this.props.image_size.height) && this.props.image_size.width > 0 && this.props.image_size.height > 0 && def(this.props.google_faces) && this.props.google_faces.constructor === Array && this.props.google_faces.length > 0) {
+      var width = this.props.image_size.width;
+      var height = this.props.image_size.height;
+      for (var i=0; i<this.props.google_faces.length; i+=1) {
+        var google_face = this.props.google_faces[i];
+        if (!def(google_face.bounds)) { continue; }
+        var head = google_face.bounds.head;
+        var face = google_face.bounds.face;
+        if (def(head)) {
+          faceElements.push(getBox(head, width, height, "head", "head" + i));
+        }
+        if (def(face)) {
+          faceElements.push(getBox(face, width, height, "face", "face" + i));
+        }
+      }
+    }
+    return <div><div id="image-wrapper"><img onLoad={this.onImgLoad} src={this.props.image}/>{faceElements}</div></div>
   }
 });
 
