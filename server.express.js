@@ -325,12 +325,11 @@ const cai = new Clarifai.App({
 });
 app.get('/clarifai/tags', function(req,res) {
 	const url = req.query['url'];
-
 	cai.models.predict(Clarifai.GENERAL_MODEL, url).then(
 		function(response) {
 			res.json(response);
 		},
-		function(err) {
+		function(error) {
 			res.json(errdict(error));
 		}
 	);
@@ -354,8 +353,12 @@ const gv = vision({
 });
 app.get('/google-vision/tags', function(req,res) {
 	const url = req.query['url'];
-	gv.detectText(url, function(err, text) {
-  		res.json({err:""+err, text});
+	gv.detectLabels(url, {verbose: true}, function(error, labels) {
+  		if (error) {
+  			res.json(errdict(err));
+  			return;
+  		}
+  		res.json(labels);
 	});
 });
 
