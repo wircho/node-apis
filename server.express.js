@@ -330,13 +330,9 @@ app.get('/clarifai/tags', function(req,res) {
 	const url = req.query['url'];
 	cai.models.predict(Clarifai.GENERAL_MODEL, url).then(
 		function(response) {
-			console.log("clarifai response:");
-			console.log(response);
 			res.json(response);
 		},
 		function(error) {
-			console.log("clarifai error:");
-			console.log(error);
 			res.json(errdict(error));
 		}
 	);
@@ -382,6 +378,7 @@ var azureDetectParams = {
 	"returnFaceAttributes": "age,gender,headPose,smile,facialHair,glasses,emotion,hair,makeup,occlusion,accessories,blur,exposure,noise",
  };
 app.get('/azure/faces/detect', function(req,res) {
+	console.log("doing azure request!");
 	const imageURL = req.query['url'];
 	request("POST",azureDetectBase + "?" + QueryItem.stringFromDictionary(azureDetectParams),"json")
 	.setHeaders({

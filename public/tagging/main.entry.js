@@ -90,7 +90,8 @@
 	  UPDATE_GOOGLE_RESPONSE: "UPDATE_GOOGLE_RESPONSE", // response (could be undefined)
 	  UPDATE_IMAGE: "UPDATE_IMAGE", // url (could be undefined)
 	  UPDATE_IMAGE_SIZE: "UPDATE_IMAGE_SIZE", // width, height
-	  UPDATE_GOOGLE_FACES: "UPDATE_GOOGLE_FACES" // faces
+	  UPDATE_GOOGLE_FACES: "UPDATE_GOOGLE_FACES", // faces
+	  UPDATE_AZURE_FACES: "UPDATE_AZURE_FACES" // faces
 	};
 
 	//Globals
@@ -104,6 +105,7 @@
 	  image:...
 	  image_size:{width: , height: }
 	  google_faces:...
+	  azure_faces:...
 	}
 	*/
 
@@ -148,6 +150,13 @@
 	        return (0, _wirchoUtilities.remove)(state, "google_faces");
 	      }
 	      break;
+	    case ACTIONS.UPDATE_AZURE_FACES:
+	      if ((0, _wirchoUtilities.def)(action.faces)) {
+	        return (0, _wirchoUtilities.mutate)(state, { azure_faces: action.faces });
+	      } else {
+	        return (0, _wirchoUtilities.remove)(state, "azure_faces");
+	      }
+	      break;
 	    default:
 	      return state;
 	      break;
@@ -164,25 +173,29 @@
 	    getClarifaiTags: function getClarifaiTags(url) {
 	      dispatch({ type: ACTIONS.UPDATE_CLARIFAI_RESPONSE, response: "Loading..." });
 	      var rurl = base_url + "/clarifai/tags?url=" + encodeURIComponent(url);
-	      var r = (0, _wirchoWebUtilities.request)("GET", rurl, "json");
-	      r.onLoad(function (info) {
+	      (0, _wirchoWebUtilities.request)("GET", rurl, "json").onLoad(function (info) {
 	        dispatch({ type: ACTIONS.UPDATE_CLARIFAI_RESPONSE, response: info.request.response });
 	      }).send();
 	    },
 	    getGoogleTags: function getGoogleTags(url) {
 	      dispatch({ type: ACTIONS.UPDATE_GOOGLE_RESPONSE, response: "Loading..." });
 	      var rurl = base_url + "/google-vision/tags?url=" + encodeURIComponent(url);
-	      var r = (0, _wirchoWebUtilities.request)("GET", rurl, "json");
-	      r.onLoad(function (info) {
+	      (0, _wirchoWebUtilities.request)("GET", rurl, "json").onLoad(function (info) {
 	        dispatch({ type: ACTIONS.UPDATE_GOOGLE_RESPONSE, response: info.request.response });
 	      }).send();
 	    },
 	    getGoogleFaces: function getGoogleFaces(url) {
 	      dispatch({ type: ACTIONS.UPDATE_GOOGLE_FACES });
 	      var rurl = base_url + "/google-vision/faces?url=" + encodeURIComponent(url);
-	      var r = (0, _wirchoWebUtilities.request)("GET", rurl, "json");
-	      r.onLoad(function (info) {
+	      (0, _wirchoWebUtilities.request)("GET", rurl, "json").onLoad(function (info) {
 	        dispatch({ type: ACTIONS.UPDATE_GOOGLE_FACES, faces: info.request.response });
+	      }).send();
+	    },
+	    getAzureFaces: function getAzureFaces(url) {
+	      dispatch({ type: ACTIONS.UPDATE_AZURE_FACES });
+	      var rurl = base_url + "/azure/faces/detect?url=" + encodeURIComponent(url);
+	      (0, _wirchoWebUtilities.request)("GET", rurl, "json").onLoad(function (info) {
+	        dispatch({ type: ACTIONS.UPDATE_AZURE_FACES, faces: info.request.response });
 	      }).send();
 	    },
 	    updateImage: function updateImage(url) {
@@ -205,10 +218,12 @@
 	      getClarifaiTags: this.props.getClarifaiTags,
 	      getGoogleTags: this.props.getGoogleTags,
 	      getGoogleFaces: this.props.getGoogleFaces,
+	      getAzureFaces: this.props.getAzureFaces,
 	      updateImage: this.props.updateImage,
 	      image: this.props.image,
 	      image_size: this.props.image_size,
 	      google_faces: this.props.google_faces,
+	      azure_faces: this.props.azure_faces,
 	      updateImageSize: this.props.updateImageSize
 	    });
 	  }
@@ -221,8 +236,21 @@
 	    return _react2.default.createElement(
 	      'div',
 	      null,
-	      _react2.default.createElement(Input, { updateImage: this.props.updateImage, getClarifaiTags: this.props.getClarifaiTags, getGoogleTags: this.props.getGoogleTags, getGoogleFaces: this.props.getGoogleFaces, updateImageSize: this.props.updateImageSize }),
-	      _react2.default.createElement(DowloadedImage, { image: this.props.image, image_size: this.props.image_size, google_faces: this.props.google_faces, updateImageSize: this.props.updateImageSize }),
+	      _react2.default.createElement(Input, {
+	        updateImage: this.props.updateImage,
+	        getClarifaiTags: this.props.getClarifaiTags,
+	        getGoogleTags: this.props.getGoogleTags,
+	        getGoogleFaces: this.props.getGoogleFaces,
+	        getAzureFaces: this.props.getAzureFaces,
+	        updateImageSize: this.props.updateImageSize
+	      }),
+	      _react2.default.createElement(DowloadedImage, {
+	        image: this.props.image,
+	        image_size: this.props.image_size,
+	        google_faces: this.props.google_faces,
+	        azure_faces: this.props.azure_faces,
+	        updateImageSize: this.props.updateImageSize
+	      }),
 	      _react2.default.createElement(ClarifaiTags, { response: this.props.clarifai_response }),
 	      _react2.default.createElement(GoogleTags, { response: this.props.google_response })
 	    );
@@ -241,6 +269,7 @@
 	    this.props.getClarifaiTags(url);
 	    this.props.getGoogleTags(url);
 	    this.props.getGoogleFaces(url);
+	    this.props.getAzureFaces(url);
 	  },
 	  render: function render() {
 	    return _react2.default.createElement(
@@ -253,7 +282,7 @@
 	  }
 	});
 
-	function getBox(info, width, height, cls, key) {
+	function getGoogleBox(info, width, height, cls, key) {
 	  var xs = info.map(function (p) {
 	    return p.x;
 	  });
@@ -273,6 +302,16 @@
 	  return _react2.default.createElement('div', { className: cls, style: style, key: key });
 	}
 
+	function getAzureBox(info, width, height, cls, key) {
+	  var style = {
+	    left: "" + info.left * 100 / width + "%",
+	    top: "" + info.top * 100 / height + "%",
+	    width: "" + info.width * 100 / width + "%",
+	    height: "" + info.height * 100 / height + "%"
+	  };
+	  return _react2.default.createElement('div', { className: cls, style: style, key: key });
+	}
+
 	var DowloadedImage = _react2.default.createClass({
 	  displayName: 'DowloadedImage',
 
@@ -284,21 +323,32 @@
 	  },
 	  render: function render() {
 	    var faceElements = [];
-	    if ((0, _wirchoUtilities.def)(this.props.image_size) && (0, _wirchoUtilities.def)(this.props.image_size.width) && (0, _wirchoUtilities.def)(this.props.image_size.height) && this.props.image_size.width > 0 && this.props.image_size.height > 0 && (0, _wirchoUtilities.def)(this.props.google_faces) && this.props.google_faces.constructor === Array && this.props.google_faces.length > 0) {
+	    if ((0, _wirchoUtilities.def)(this.props.image_size) && (0, _wirchoUtilities.def)(this.props.image_size.width) && (0, _wirchoUtilities.def)(this.props.image_size.height) && this.props.image_size.width > 0 && this.props.image_size.height > 0) {
 	      var width = this.props.image_size.width;
 	      var height = this.props.image_size.height;
-	      for (var i = 0; i < this.props.google_faces.length; i += 1) {
-	        var google_face = this.props.google_faces[i];
-	        if (!(0, _wirchoUtilities.def)(google_face.bounds)) {
-	          continue;
+	      if ((0, _wirchoUtilities.def)(this.props.google_faces) && this.props.google_faces.constructor === Array && this.props.google_faces.length > 0) {
+	        for (var i = 0; i < this.props.google_faces.length; i += 1) {
+	          var google_face = this.props.google_faces[i];
+	          if (!(0, _wirchoUtilities.def)(google_face.bounds)) {
+	            continue;
+	          }
+	          var head = google_face.bounds.head;
+	          var face = google_face.bounds.face;
+	          if ((0, _wirchoUtilities.def)(head)) {
+	            faceElements.push(getGoogleBox(head, width, height, "google-head", "google-head" + i));
+	          }
+	          if ((0, _wirchoUtilities.def)(face)) {
+	            faceElements.push(getGoogleBox(face, width, height, "google-face", "google-face" + i));
+	          }
 	        }
-	        var head = google_face.bounds.head;
-	        var face = google_face.bounds.face;
-	        if ((0, _wirchoUtilities.def)(head)) {
-	          faceElements.push(getBox(head, width, height, "google-head", "google-head" + i));
-	        }
-	        if ((0, _wirchoUtilities.def)(face)) {
-	          faceElements.push(getBox(face, width, height, "google-face", "google-face" + i));
+	      }
+	      if ((0, _wirchoUtilities.def)(this.props.azure_faces) && this.props.azure_faces.constructor === Array && this.props.azure_faces.length > 0) {
+	        for (var i = 0; i < this.props.azure_faces.length; i += 1) {
+	          var azure_face = this.props.azure_faces[i];
+	          if (!(0, _wirchoUtilities.def)(azure_face.faceRectangle)) {
+	            continue;
+	          }
+	          faceElements.push(getAzureBox(azure_face.faceRectangle, width, height, "azure-face", "azure-face" + i));
 	        }
 	      }
 	    }
