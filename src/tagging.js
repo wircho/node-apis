@@ -229,10 +229,10 @@ const DowloadedImage = React.createClass({
         var head = google_face.bounds.head;
         var face = google_face.bounds.face;
         if (def(head)) {
-          faceElements.push(getBox(head, width, height, "head", "head" + i));
+          faceElements.push(getBox(head, width, height, "google-head", "google-head" + i));
         }
         if (def(face)) {
-          faceElements.push(getBox(face, width, height, "face", "face" + i));
+          faceElements.push(getBox(face, width, height, "google-face", "google-face" + i));
         }
       }
     }

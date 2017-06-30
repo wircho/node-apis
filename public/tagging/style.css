@@ -115,15 +115,15 @@ img {
 	background-color: black;
 	border-style: none;
 }
-.face {
-	border-style: solid;
-	border-width: 1px;
-	border-color: red;
+.google-face, .google-head, .azure-face, .azure-head {
+	border-style: dashed;
+	border-width: 2px;
 	position: absolute;
 }
-.head {
-	border-style: solid;
-	border-width: 1px;
-	border-color: green;
-	position: absolute;
+
+.google-face, .google-head {
+	border-color: red;
+}
+.azure-face, .azure-head {
+	border-color: blue;
 }

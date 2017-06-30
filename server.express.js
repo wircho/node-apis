@@ -47,10 +47,13 @@ import {
 } from 'wircho-web-utilities';
 
 //Local Terminal Command
-//MONGODB_URI=mongodb://localhost:27017 MONGODB_SECRET=*** TWITTER_KEY=*** TWITTER_SECRET=*** TWITTER_CALLBACK=http://wircho.com CLARIFAI_KEY=??? GOOGLE_VISION_FILE_PATH=../mv-2f70dc320c4b.json npm start
+//MONGODB_URI=mongodb://localhost:27017 MONGODB_SECRET=*** TWITTER_KEY=*** TWITTER_SECRET=*** TWITTER_CALLBACK=http://wircho.com CLARIFAI_KEY=??? GOOGLE_VISION_FILE_PATH=../mv-2f70dc320c4b.json AZURE_KEY_0=??? AZURE_KEY_1=??? npm start
 
 //Clear Cache Command
-//
+// If needed: brew install heroku
+// If needed: heroku login
+// If needed: heroku plugins:install heroku-repo
+// heroku repo:purge_cache -a node-apis
 
 //Settings
 RequestHelpers.use(RequestBackEndHelpers);
@@ -327,9 +330,13 @@ app.get('/clarifai/tags', function(req,res) {
 	const url = req.query['url'];
 	cai.models.predict(Clarifai.GENERAL_MODEL, url).then(
 		function(response) {
+			console.log("clarifai response:");
+			console.log(response);
 			res.json(response);
 		},
 		function(error) {
+			console.log("clarifai error:");
+			console.log(error);
 			res.json(errdict(error));
 		}
 	);
@@ -365,6 +372,28 @@ app.get('/google-vision/faces', function(req,res) {
   		}
   		res.json(faces);
 	});
+});
+
+// MS Azure faces
+const azureDetectBase = "https://westcentralus.api.cognitive.microsoft.com/face/v1.0/detect";
+var azureDetectParams = {
+	"returnFaceId": "true",
+	"returnFaceLandmarks": "false",
+	"returnFaceAttributes": "age,gender,headPose,smile,facialHair,glasses,emotion,hair,makeup,occlusion,accessories,blur,exposure,noise",
+ };
+app.get('/azure/faces/detect', function(req,res) {
+	const imageURL = req.query['url'];
+	request("POST",azureDetectBase + "?" + QueryItem.stringFromDictionary(azureDetectParams),"json")
+	.setHeaders({
+		"Content-Type": "application/json",
+		"Ocp-Apim-Subscription-Key": process.env.AZURE_KEY_0
+	})
+	.setParams(mutate(azureDetectParams, {url: imageURL}))
+	.onLoad(function(info) {
+		res.json(info.content);
+	}).onError(function(error) {
+		res.json(errdict(error));
+	}).send("json");
 });
 
 
