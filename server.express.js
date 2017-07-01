@@ -378,14 +378,30 @@ var azureDetectParams = {
 	"returnFaceAttributes": "age,gender,headPose,smile,facialHair,glasses,emotion,hair,makeup,occlusion,accessories,blur,exposure,noise",
  };
 app.get('/azure/faces/detect', function(req,res) {
-	console.log("doing azure request!");
-	const imageURL = req.query['url'];
+	var imageURL = req.query['url'];
 	request("POST",azureDetectBase + "?" + QueryItem.stringFromDictionary(azureDetectParams),"json")
 	.setHeaders({
 		"Content-Type": "application/json",
 		"Ocp-Apim-Subscription-Key": process.env.AZURE_KEY_0
 	})
-	.setParams(mutate(azureDetectParams, {url: imageURL}))
+	.setParams({url: imageURL})
+	.onLoad(function(info) {
+		res.json(info.content);
+	}).onError(function(error) {
+		res.json(errdict(error));
+	}).send("json");
+});
+
+// MS Azure group
+const azureGroupBase = "https://westcentralus.api.cognitive.microsoft.com/face/v1.0/group";
+app.get('/azure/faces/group', function(req,res) {
+	var params = {faceIds: req.query['ids'].split(",")};
+	request("POST",azureGroupBase,"json")
+	.setHeaders({
+		"Content-Type": "application/json",
+		"Ocp-Apim-Subscription-Key": process.env.AZURE_KEY_0
+	})
+	.setParams(params)
 	.onLoad(function(info) {
 		res.json(info.content);
 	}).onError(function(error) {

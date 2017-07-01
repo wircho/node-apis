@@ -91,8 +91,8 @@
 	  UPDATE_IMAGE: "UPDATE_IMAGE", // url (could be undefined)
 	  UPDATE_IMAGE_SIZE: "UPDATE_IMAGE_SIZE", // width, height
 	  UPDATE_GOOGLE_FACES: "UPDATE_GOOGLE_FACES", // faces
-	  UPDATE_AZURE_FACES: "UPDATE_AZURE_FACES" // faces
-
+	  UPDATE_AZURE_FACES: "UPDATE_AZURE_FACES", // faces
+	  GROUP_AZURE_FACES: "GROUP_AZURE_FACES"
 
 	  //Globals
 	};var base_url = window.location.protocol + "//" + window.location.hostname + ":" + window.location.port;
@@ -106,6 +106,15 @@
 	  image_size:{width: , height: }
 	  google_faces:...
 	  azure_faces:...
+	  session_azure_face_ids:[ face ids ],
+	  session_azure_faces: {
+	    faceId0: {imageURL:..., faceRectangle:...},
+	    faceId1: ...
+	  },
+	  session_image_sizes: {
+	    imageURL0: {width:, height:},
+	    imageURL1: ....
+	  }
 	}
 	*/
 
@@ -137,8 +146,15 @@
 	      }
 	      break;
 	    case ACTIONS.UPDATE_IMAGE_SIZE:
-	      if ((0, _wirchoUtilities.def)(action.width) && (0, _wirchoUtilities.def)(action.height)) {
-	        return (0, _wirchoUtilities.mutate)(state, { image_size: { width: action.width, height: action.height } });
+	      if ((0, _wirchoUtilities.def)(action.width) && (0, _wirchoUtilities.def)(action.height) && (0, _wirchoUtilities.def)(action.url)) {
+	        var size = { width: action.width, height: action.height };
+	        var finalState = state;
+	        if (!(0, _wirchoUtilities.def)(finalState.session_image_sizes) || !(0, _wirchoUtilities.def)(finalState.session_image_sizes[action.url])) {
+	          var mutation = {};
+	          mutation[action.url] = size;
+	          finalState = (0, _wirchoUtilities.mutate)(finalState, { session_image_sizes: (0, _wirchoUtilities.mutate)((0, _wirchoUtilities.fallback)(finalState.session_image_sizes, {}), mutation) });
+	        }
+	        return (0, _wirchoUtilities.mutate)(finalState, { image_size: size });
 	      } else {
 	        return (0, _wirchoUtilities.remove)(state, "image_size");
 	      }
@@ -152,9 +168,30 @@
 	      break;
 	    case ACTIONS.UPDATE_AZURE_FACES:
 	      if ((0, _wirchoUtilities.def)(action.faces)) {
-	        return (0, _wirchoUtilities.mutate)(state, { azure_faces: action.faces });
+	        var finalState = state;
+	        for (var i = 0; i < action.faces.length; i += 1) {
+	          var face = action.faces[i];
+	          if (!(0, _wirchoUtilities.def)(finalState.session_azure_faces) || !(0, _wirchoUtilities.def)(finalState.session_azure_faces[face.faceId])) {
+	            var mutation = {};
+	            mutation[face.faceId] = { imageURL: action.url, faceRectangle: face.faceRectangle };
+	            finalState = (0, _wirchoUtilities.mutate)(finalState, {
+	              session_azure_faces: (0, _wirchoUtilities.mutate)((0, _wirchoUtilities.fallback)(finalState.session_azure_faces, {}), mutation),
+	              session_azure_face_ids: (0, _wirchoUtilities.fallback)(finalState.session_azure_face_ids, []).concat([face.faceId])
+	            });
+	          }
+	        }
+	        return (0, _wirchoUtilities.mutate)(finalState, { azure_faces: action.faces });
 	      } else {
 	        return (0, _wirchoUtilities.remove)(state, "azure_faces");
+	      }
+	      break;
+	    case ACTIONS.GROUP_AZURE_FACES:
+	      if ((0, _wirchoUtilities.def)(action.grouping) && ((0, _wirchoUtilities.def)(action.grouping.groups) || (0, _wirchoUtilities.def)(action.grouping.messyGroup))) {
+	        var gs = (0, _wirchoUtilities.fallback)(action.grouping.groups, []);
+	        var mg = (0, _wirchoUtilities.fallback)(action.grouping.messyGroup, []);
+	        return (0, _wirchoUtilities.mutate)(state, { session_azure_face_ids: gs.concat(mg) });
+	      } else {
+	        return state;
 	      }
 	      break;
 	    default:
@@ -195,14 +232,29 @@
 	      dispatch({ type: ACTIONS.UPDATE_AZURE_FACES });
 	      var rurl = base_url + "/azure/faces/detect?url=" + encodeURIComponent(url);
 	      (0, _wirchoWebUtilities.request)("GET", rurl, "json").onLoad(function (info) {
-	        dispatch({ type: ACTIONS.UPDATE_AZURE_FACES, faces: info.request.response });
+	        dispatch({ type: ACTIONS.UPDATE_AZURE_FACES, faces: info.request.response, url: url });
+	      }).send();
+	    },
+	    groupFaces: function groupFaces(ids) {
+	      var array = [];
+	      for (var i = 0; i < ids.length; i += 1) {
+	        var id = ids[i];
+	        if (id.constructor === Array) {
+	          array = array.concat(id);
+	        } else {
+	          array = array.concat([id]);
+	        }
+	      }
+	      var rurl = base_url + "/azure/faces/group?ids=" + array.join(",");
+	      (0, _wirchoWebUtilities.request)("GET", rurl, "json").onLoad(function (info) {
+	        dispatch({ type: ACTIONS.GROUP_AZURE_FACES, grouping: info.request.response, url: url });
 	      }).send();
 	    },
 	    updateImage: function updateImage(url) {
 	      dispatch({ type: ACTIONS.UPDATE_IMAGE, url: url });
 	    },
 	    updateImageSize: function updateImageSize(dict) {
-	      dispatch({ type: ACTIONS.UPDATE_IMAGE_SIZE, width: dict.width, height: dict.height });
+	      dispatch({ type: ACTIONS.UPDATE_IMAGE_SIZE, url: dict.url, width: dict.width, height: dict.height });
 	    }
 	  };
 	};
@@ -224,7 +276,11 @@
 	      image_size: this.props.image_size,
 	      google_faces: this.props.google_faces,
 	      azure_faces: this.props.azure_faces,
-	      updateImageSize: this.props.updateImageSize
+	      updateImageSize: this.props.updateImageSize,
+	      session_azure_face_ids: this.props.session_azure_face_ids,
+	      session_azure_faces: this.props.session_azure_faces,
+	      session_image_sizes: this.props.session_image_sizes,
+	      groupFaces: this.props.groupFaces
 	    });
 	  }
 	});
@@ -252,7 +308,13 @@
 	        updateImageSize: this.props.updateImageSize
 	      }),
 	      _react2.default.createElement(ClarifaiTags, { response: this.props.clarifai_response }),
-	      _react2.default.createElement(GoogleTags, { response: this.props.google_response })
+	      _react2.default.createElement(GoogleTags, { response: this.props.google_response }),
+	      _react2.default.createElement(AzureFaces, {
+	        face_ids: this.props.session_azure_face_ids,
+	        faces: this.props.session_azure_faces,
+	        sizes: this.props.session_image_sizes,
+	        groupFaces: this.props.groupFaces
+	      })
 	    );
 	  }
 	});
@@ -319,7 +381,7 @@
 	    var img = _ref.target;
 
 	    console.log("LOADED IMAGE!");
-	    this.props.updateImageSize({ width: img.naturalWidth, height: img.naturalHeight });
+	    this.props.updateImageSize({ url: img.src, width: img.naturalWidth, height: img.naturalHeight });
 	  },
 	  render: function render() {
 	    var faceElements = [];
@@ -358,7 +420,7 @@
 	      _react2.default.createElement(
 	        'div',
 	        { id: 'image-wrapper' },
-	        _react2.default.createElement('img', { onLoad: this.onImgLoad, src: this.props.image }),
+	        _react2.default.createElement('img', { className: 'main-image', onLoad: this.onImgLoad, src: this.props.image }),
 	        faceElements
 	      )
 	    );
@@ -505,6 +567,133 @@
 	        'div',
 	        null,
 	        tagElements
+	      )
+	    );
+	  }
+	});
+
+	function afSubtitle(count) {
+	  if (count == -1) {
+	    return _react2.default.createElement(
+	      'h4',
+	      { key: 'group-uncat' },
+	      'Uncategorized'
+	    );
+	  }
+	  return _react2.default.createElement(
+	    'h4',
+	    { key: "group-" + count },
+	    'Group ',
+	    count
+	  );
+	}
+
+	function afFace(id, face, size) {
+	  var boxSide = 100.0;
+	  var center = {
+	    x: face.faceRectangle.left + face.faceRectangle.width / 2.0,
+	    y: face.faceRectangle.top + face.faceRectangle.height / 2.0
+	  };
+	  var side = Math.max(face.faceRectangle.width, face.faceRectangle.height);
+	  var scale = boxSide / side;
+	  var imageSize = {
+	    width: size.width * scale,
+	    height: size.height * scale
+	  };
+	  var boxCenter = {
+	    x: center.x * scale,
+	    y: center.y * scale
+	  };
+	  var imageOffset = {
+	    x: -boxCenter.x + boxSide / 2.0,
+	    y: -boxCenter.y + boxSide / 2.0
+	  };
+	  var boxStyle = {
+	    position: "relative",
+	    display: "inline-block",
+	    width: boxSide,
+	    height: boxSide,
+	    overflow: "hidden"
+	  };
+	  var imageStyle = {
+	    position: "absolute",
+	    top: imageOffset.y,
+	    left: imageOffset.x,
+	    width: imageSize.width,
+	    height: imageSize.height
+	  };
+	  return _react2.default.createElement(
+	    'div',
+	    { key: id },
+	    _react2.default.createElement(
+	      'div',
+	      { style: boxStyle },
+	      _react2.default.createElement('img', { src: face.imageURL, style: imageStyle })
+	    )
+	  );
+	}
+
+	var AzureFaces = _react2.default.createClass({
+	  displayName: 'AzureFaces',
+
+	  groupFaces: function groupFaces(event) {
+	    event.preventDefault();
+	    this.props.groupFaces(this.props.face_ids);
+	  },
+	  render: function render() {
+	    if (!(0, _wirchoUtilities.def)(this.props.face_ids) || !(0, _wirchoUtilities.def)(this.props.faces) || !(0, _wirchoUtilities.def)(this.props.sizes)) {
+	      return null;
+	    }
+
+	    var title = "Azure Faces:";
+
+	    var faceElements = [];
+
+	    var groupCounter = 0;
+	    var inUncategorized = false;
+	    for (var i = 0; i < this.props.face_ids.length; i += 1) {
+	      var ids = this.props.face_ids[i];
+	      if (ids.constructor === Array) {
+	        faceElements.push(afSubtitle(groupCounter));
+	        groupCounter += 1;
+	        for (var j = 0; j < ids.length; j += 1) {
+	          var id = ids[j];
+	          var face = this.props.faces[id];
+	          var size = this.props.sizes[face.imageURL];
+	          if ((0, _wirchoUtilities.def)(face) && (0, _wirchoUtilities.def)(size)) {
+	            faceElements.push(afFace(id, face, size));
+	          }
+	        }
+	      } else {
+	        if (!inUncategorized) {
+	          inUncategorized = true;
+	          faceElements.push(afSubtitle(-1));
+	        }
+	        var face = this.props.faces[ids];
+	        var size = this.props.sizes[face.imageURL];
+	        if ((0, _wirchoUtilities.def)(face) && (0, _wirchoUtilities.def)(size)) {
+	          faceElements.push(afFace(ids, face, size));
+	        }
+	      }
+	    }
+
+	    return _react2.default.createElement(
+	      'div',
+	      null,
+	      _react2.default.createElement(
+	        'h3',
+	        null,
+	        title
+	      ),
+	      _react2.default.createElement(
+	        'div',
+	        null,
+	        faceElements
+	      ),
+	      _react2.default.createElement(
+	        'div',
+	        null,
+	        _react2.default.createElement('input', { type: 'button', value: 'Group Faces', onClick: this.groupFaces })
 	      )
 	    );
 	  }

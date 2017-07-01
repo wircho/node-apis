@@ -108,7 +108,7 @@ a.logout, a.logout:visited, a.login, a.login:visited {
 	position:relative;
 	display: inline-block;
 }
-img {
+img.main-image {
 	max-height: 300px;
 	min-width: 10px;
 	width: auto;
