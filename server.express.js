@@ -333,6 +333,8 @@ app.get('/clarifai/tags', function(req,res) {
 			res.json(response);
 		},
 		function(error) {
+			console.log("Clarifai error: ");
+			console.log(error);
 			res.json(errdict(error));
 		}
 	);
@@ -351,6 +353,8 @@ app.get('/google-vision/tags', function(req,res) {
 	const url = req.query['url'];
 	gv.detectLabels(url, {verbose: true}, function(error, labels) {
   		if (error) {
+			console.log("Google vision error: ");
+			console.log(error);
   			res.json(errdict(err));
   			return;
   		}
