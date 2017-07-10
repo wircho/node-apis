@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "Useful APIs",
   "dependencies": {
-    "@google-cloud/vision": "^0.11.3",
-    "aws-sdk": "^2.80.0",
+    "@google-cloud/vision": "^0.11.4",
+    "aws-sdk": "^2.82.0",
     "babel-core": "^6.25.0",
     "babel-loader": "^6.2.4",
     "babel-plugin-transform-class-properties": "^6.24.1",
@@ -29,14 +29,19 @@
     "jquery": "^3.0.0",
     "jquery-form": "^3.50.0",
     "json-loader": "^0.5.4",
-    "mongoose": "^4.11.0",
+    "mokriya-vision": "git+https://github.com/mokriya-org/internal-node-vision.git",
+    "mongoose": "^4.11.1",
+    "mquery": "^2.3.1",
     "react": "^15.6.1",
     "react-dom": "^15.6.1",
     "react-redux": "^4.4.8",
     "redux": "^3.7.1",
+    "sax": "^1.2.4",
     "webpack": "^1.15.0",
     "wircho-utilities": "git+https://github.com/wircho/NodeUtilities.git",
-    "wircho-web-utilities": "git+https://github.com/wircho/NodeWebUtilities.git"
+    "wircho-web-utilities": "git+https://github.com/wircho/NodeWebUtilities.git",
+    "xml2js": "^0.4.17",
+    "xmlbuilder": "^9.0.1"
   },
   "scripts": {
     "webpack-watch": "webpack -w",
