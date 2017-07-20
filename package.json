@@ -25,6 +25,7 @@
     "express": "^4.15.3",
     "express-session": "^1.15.3",
     "formidable": "^1.0.17",
+    "googleplaces": "^0.6.1",
     "immutable": "^3.8.1",
     "jquery": "^3.0.0",
     "jquery-form": "^3.50.0",
