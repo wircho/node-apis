@@ -13,8 +13,9 @@ var formidable 				= require('formidable');
 var fs 						= require('fs');
 const aws 					= require('aws-sdk');
 const querystring 			= require('querystring');
-const Clarifai 				= require('clarifai');
-const vision 				= require('@google-cloud/vision');
+//const Clarifai 				= require('clarifai');
+//const vision 				= require('@google-cloud/vision');
+const MokriyaVision 		= require('mokriya-vision');
 import {
 //Utilities
   pad,
@@ -323,12 +324,9 @@ app.get('/stream_test', function(req,res) {
 })
 
 // Clarifai tags
-const cai = new Clarifai.App({
-	apiKey: process.env.CLARIFAI_KEY
-});
 app.get('/clarifai/tags', function(req,res) {
 	const url = req.query['url'];
-	cai.models.predict(Clarifai.GENERAL_MODEL, url).then(
+	MokriyaVision.getClarifaiTags(url).then(
 		function(response) {
 			res.json(response);
 		},
@@ -341,76 +339,59 @@ app.get('/clarifai/tags', function(req,res) {
 });
 
 // Google Vision tags
-if (!fs.existsSync(process.env.GOOGLE_VISION_FILE_PATH)) {
-	var text = JSON.parse(process.env.GOOGLE_VISION_FILE_INFO).text;
-	fs.writeFileSync(process.env.GOOGLE_VISION_FILE_PATH, text);
-}
-const gv = vision({
-  projectId: 'mokriya-vision',
-  keyFilename: process.env.GOOGLE_VISION_FILE_PATH
-});
 app.get('/google-vision/tags', function(req,res) {
 	const url = req.query['url'];
-	gv.detectLabels(url, {verbose: true}, function(error, labels) {
-  		if (error) {
+	MokriyaVision.getGoogleVisionTags(url).then(
+		function(labels) {
+			res.json(labels);
+		},
+		function(error) {
 			console.log("Google vision error: ");
 			console.log(error);
   			res.json(errdict(err));
-  			return;
-  		}
-  		res.json(labels);
-	});
+		}
+	);
 });
 
 // Google Vision faces
 app.get('/google-vision/faces', function(req,res) {
 	const url = req.query['url'];
-	gv.detectFaces(url, function(error, faces, api) {
-  		if (error) {
-  			res.json(errdict(err));
-  			return;
-  		}
-  		res.json(faces);
-	});
+	MokriyaVision.getGoogleVisionFaces(url).then(
+		function(faces) {
+  			res.json(faces);
+		},
+		function(error) {
+			console.log("Google faces error: ");
+			console.log(error);
+			res.json(errdict(err));
+		}
+	);
 });
 
 // MS Azure faces
-const azureDetectBase = "https://westcentralus.api.cognitive.microsoft.com/face/v1.0/detect";
-var azureDetectParams = {
-	"returnFaceId": "true",
-	"returnFaceLandmarks": "false",
-	"returnFaceAttributes": "age,gender,headPose,smile,facialHair,glasses,emotion,hair,makeup,occlusion,accessories,blur,exposure,noise",
- };
 app.get('/azure/faces/detect', function(req,res) {
-	var imageURL = req.query['url'];
-	request("POST",azureDetectBase + "?" + QueryItem.stringFromDictionary(azureDetectParams),"json")
-	.setHeaders({
-		"Content-Type": "application/json",
-		"Ocp-Apim-Subscription-Key": process.env.AZURE_KEY_0
-	})
-	.setParams({url: imageURL})
-	.onLoad(function(info) {
-		res.json(info.content);
-	}).onError(function(error) {
-		res.json(errdict(error));
-	}).send("json");
+	var url = req.query['url'];
+	MokriyaVision.getAzureFaces(url).then(
+		function(content) {
+			res.json(content);
+		},
+		function(error) {
+			res.json(errdict(error));
+		}
+	);
 });
 
 // MS Azure group
-const azureGroupBase = "https://westcentralus.api.cognitive.microsoft.com/face/v1.0/group";
 app.get('/azure/faces/group', function(req,res) {
-	var params = {faceIds: req.query['ids'].split(",")};
-	request("POST",azureGroupBase,"json")
-	.setHeaders({
-		"Content-Type": "application/json",
-		"Ocp-Apim-Subscription-Key": process.env.AZURE_KEY_0
-	})
-	.setParams(params)
-	.onLoad(function(info) {
-		res.json(info.content);
-	}).onError(function(error) {
-		res.json(errdict(error));
-	}).send("json");
+	var ids = req.query['ids'].split(",");
+	MokriyaVision.getAzureFaceGroups(ids).then(
+		function(content) {
+			res.json(content);
+		},
+		function(error) {
+			res.json(errdict(error));
+		}
+	);
 });
 
 
